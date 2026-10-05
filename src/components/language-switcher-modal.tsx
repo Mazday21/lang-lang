@@ -34,13 +34,13 @@ export function LanguageSwitcherModal({
   const getTargetOptions = (native: string) => {
     if (native === "ru") {
       return [
-        { code: "uz", flag: "🇺🇿", name: "O'zbekcha (Узбекский)" },
-        { code: "en", flag: "🇬🇧", name: "English (Английский)" },
+        { code: "uz", codeBadge: "UZ", name: "O'zbekcha (Узбекский)" },
+        { code: "en", codeBadge: "EN", name: "English (Английский)" },
       ];
     } else {
       return [
-        { code: "en", flag: "🇬🇧", name: "English (Ingliz tili)" },
-        { code: "ru", flag: "🇷🇺", name: "Русский (Rus tili)" },
+        { code: "en", codeBadge: "EN", name: "English (Ingliz tili)" },
+        { code: "ru", codeBadge: "RU", name: "Русский (Rus tili)" },
       ];
     }
   };
@@ -104,8 +104,9 @@ export function LanguageSwitcherModal({
                     : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
                 }`}
               >
-                <span className="text-xs text-[#4A4453] flex items-center gap-1.5">
-                  <span>🇷🇺</span> Русский
+                <span className="text-xs text-[#4A4453] flex items-center gap-2">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#E8E2D9] text-[#4A4453]">RU</span>
+                  <span>Русский</span>
                 </span>
                 {nativeLang === "ru" && (
                   <Check className="h-3.5 w-3.5 text-[#2A472C]" />
@@ -121,8 +122,9 @@ export function LanguageSwitcherModal({
                     : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
                 }`}
               >
-                <span className="text-xs text-[#4A4453] flex items-center gap-1.5">
-                  <span>🇺🇿</span> O'zbekcha
+                <span className="text-xs text-[#4A4453] flex items-center gap-2">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#E8E2D9] text-[#4A4453]">UZ</span>
+                  <span>O'zbekcha</span>
                 </span>
                 {nativeLang === "uz" && (
                   <Check className="h-3.5 w-3.5 text-[#2A472C]" />
@@ -149,7 +151,8 @@ export function LanguageSwitcherModal({
                   }`}
                 >
                   <span className="text-xs text-[#4A4453] flex items-center gap-2">
-                    <span className="text-lg">{opt.flag}</span> {opt.name}
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#E8E2D9] text-[#4A4453]">{opt.codeBadge}</span>
+                    <span>{opt.name}</span>
                   </span>
                   {targetLang === opt.code && (
                     <div className="h-5 w-5 rounded-full bg-[#C7E5C8] flex items-center justify-center text-[#2A472C]">

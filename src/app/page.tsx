@@ -49,17 +49,20 @@ export default function HubPage() {
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [isLanguageSwitcherOpen, setIsLanguageSwitcherOpen] = useState(false);
 
+  // Helper to normalize language code (strictly turns "gb" into "en")
+  const cleanCode = (code?: string | null, fallback = "ru") => {
+    if (!code) return fallback;
+    const c = code.toLowerCase().trim();
+    if (c === "gb") return "en";
+    return c;
+  };
+
   // Active language pair
-  const nativeLang = user?.native_language || "ru";
-  const targetLang = user?.target_language || "uz";
+  const nativeLang = cleanCode(user?.native_language, "ru");
+  const targetLang = cleanCode(user?.target_language, "uz");
   const currentPairKey = `${nativeLang}-${targetLang}`;
 
-  const flagMap: Record<string, string> = {
-    ru: "🇷🇺 RU",
-    uz: "🇺🇿 UZ",
-    en: "🇬🇧 EN",
-  };
-  const pairLabel = `${flagMap[nativeLang] || nativeLang.toUpperCase()} ➔ ${flagMap[targetLang] || targetLang.toUpperCase()}`;
+  const pairLabel = `${nativeLang.toUpperCase()} ➔ ${targetLang.toUpperCase()}`;
 
   const fetchDecksAndLimits = useCallback(
     async (overrideNative?: string, overrideTarget?: string) => {
@@ -71,8 +74,8 @@ export default function HubPage() {
           headers["Authorization"] = `Bearer ${token}`;
         }
 
-        const nat = overrideNative || user?.native_language || "ru";
-        const tar = overrideTarget || user?.target_language || "uz";
+        const nat = cleanCode(overrideNative || user?.native_language, "ru");
+        const tar = cleanCode(overrideTarget || user?.target_language, "uz");
         const pair = `${nat}-${tar}`.toLowerCase();
 
         const [decksRes, limitsRes] = await Promise.all([
@@ -80,16 +83,7 @@ export default function HubPage() {
           fetch("/api/user/limits", { headers }),
         ]);
 
-        let decksData = await decksRes.json();
-
-        // If pair-filtered decks returned 0, try fetching all user decks as fallback so user is never locked out
-        if (decksData.success && (!decksData.decks || decksData.decks.length === 0)) {
-          const fallbackRes = await fetch("/api/decks", { headers });
-          const fallbackData = await fallbackRes.json();
-          if (fallbackData.success && fallbackData.decks && fallbackData.decks.length > 0) {
-            decksData = fallbackData;
-          }
-        }
+        const decksData = await decksRes.json();
 
         if (decksData.success) {
           setDecks(decksData.decks || []);
@@ -211,11 +205,12 @@ export default function HubPage() {
           {/* Language Pair Selector Button */}
           <button
             onClick={() => setIsLanguageSwitcherOpen(true)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E8E2D9] hover:border-[#E0BBE4] active:scale-95 text-xs font-semibold text-[#4A4453] transition-all shadow-none"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E8E2D9] hover:border-[#E0BBE4] active:scale-95 text-xs font-semibold text-[#4A4453] transition-all shadow-none whitespace-nowrap shrink-0"
+            style={{ whiteSpace: "nowrap" }}
             title="Сменить язык обучения"
           >
-            <span>{pairLabel}</span>
-            <ChevronDown className="h-3 w-3 text-[#8A8493]" />
+            <span className="whitespace-nowrap font-bold tracking-wide">{pairLabel}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-[#8A8493] shrink-0" />
           </button>
 
           <Button
@@ -263,14 +258,6 @@ export default function HubPage() {
             <p className="text-2xl font-semibold text-[#4A4453]">
               {isLoadingDecks ? "..." : totalDue > 0 ? `${totalDue} карточек` : "Всё повторено!"}
             </p>
-            <div className="flex items-center gap-2 pt-0.5">
-              <span className="text-xs text-[#8A8493] flex items-center gap-1">
-                <Zap className="h-3 w-3 text-[#E0BBE4]" />
-                {limits?.plan === "pro"
-                  ? "AI-проверки: Безлимитно"
-                  : `AI-проверки: ${limits?.remaining ?? 20} из 20`}
-              </span>
-            </div>
           </div>
           <div className="h-12 w-12 rounded-2xl bg-[#F5EFEB] flex items-center justify-center text-[#482C4E]">
             <Sparkles className="h-6 w-6 text-[#E0BBE4]" />
@@ -368,11 +355,6 @@ export default function HubPage() {
                         <h3 className="text-sm font-semibold text-[#4A4453] truncate">
                           {deck.title}
                         </h3>
-                        {deck.is_dynamic && (
-                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-normal">
-                            AI-контекст
-                          </Badge>
-                        )}
                       </div>
                       {deck.description && (
                         <p className="text-xs text-[#8A8493] line-clamp-2 leading-relaxed">

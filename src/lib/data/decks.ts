@@ -5,8 +5,11 @@ import { GeneratedDeckResult } from "@/lib/ai/deck-generator";
 import {
   detectLanguageFromText,
   isDeckMatchingPair,
-  extractLangTokens,
+  extractDirectedLangTokens,
+  normalizePairKey,
 } from "@/lib/utils/language";
+
+export const MAX_SESSION_CARDS = 20;
 
 export interface DeckItem {
   id: string;
@@ -358,33 +361,28 @@ export async function getUserDecks(
     return [];
   }
 
-  // If user has 0 decks at all, auto-seed starter decks for pair if provided
-  if (decks.length === 0 && pairFilter) {
-    const tokens = extractLangTokens(pairFilter);
+  // Strict language pair filtering
+  let matchedDecks = pairFilter
+    ? decks.filter((deck) => isDeckMatchingPair(deck, pairFilter))
+    : decks;
+
+  // If user has 0 decks for this specific pair, auto-seed starter decks for this pair
+  if (matchedDecks.length === 0 && pairFilter) {
+    const tokens = extractDirectedLangTokens(pairFilter);
     const native = tokens[0] || "ru";
     const target = tokens[1] || "uz";
     try {
       await seedStarterDecksForPair(userId, native, target);
       const reseeded = await supabase
         .from("decks")
-        .select("id, title, description, native_language, target_language, language_pair, is_dynamic, user_id")
-        .eq("user_id", userId)
+        .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id")
+        .or(`user_id.eq.${userId},is_starter.eq.true`)
         .order("created_at", { ascending: true });
       if (reseeded.data && reseeded.data.length > 0) {
-        decks = reseeded.data;
+        matchedDecks = reseeded.data.filter((deck) => isDeckMatchingPair(deck, pairFilter));
       }
     } catch (seedErr) {
       console.warn("Could not re-seed on empty query:", seedErr);
-    }
-  }
-
-  // Soft language pair filtering
-  let matchedDecks = decks;
-  if (pairFilter) {
-    const filtered = decks.filter((deck) => isDeckMatchingPair(deck, pairFilter));
-    // If soft matching found decks, use them. If 0 found, fall back to all decks so user is never locked out!
-    if (filtered.length > 0) {
-      matchedDecks = filtered;
     }
   }
 
@@ -453,6 +451,7 @@ export async function getDeckCards(
     if (trainingCards.length === 0) {
       trainingCards = [...deckCards];
     }
+    trainingCards = trainingCards.slice(0, MAX_SESSION_CARDS);
 
     return {
       deck: {
@@ -496,7 +495,8 @@ export async function getDeckCards(
     .select("id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at")
     .eq("deck_id", deckId)
     .lte("next_review_at", nowIso)
-    .order("next_review_at", { ascending: true });
+    .order("next_review_at", { ascending: true })
+    .limit(MAX_SESSION_CARDS);
 
   if (dueErr) throw new Error(dueErr.message);
 
@@ -507,11 +507,14 @@ export async function getDeckCards(
       .from("cards")
       .select("id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at")
       .eq("deck_id", deckId)
-      .order("next_review_at", { ascending: true });
+      .order("next_review_at", { ascending: true })
+      .limit(MAX_SESSION_CARDS);
 
     if (allErr) throw new Error(allErr.message);
     cards = allCards || [];
   }
+
+  cards = cards.slice(0, MAX_SESSION_CARDS);
 
   return {
     deck: {

@@ -131,7 +131,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
       setDeckTitle(data.deck?.title || "Колода");
       setTargetLanguage(data.deck?.target_language || "узбекский");
-      setCards(data.cards || []);
+      // Enforce training session limit: max 20 cards per session
+      setCards((data.cards || []).slice(0, 20));
       setCurrentIndex(0);
       setReviewedCount(0);
       setViewMode("unanswered");

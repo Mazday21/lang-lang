@@ -22,13 +22,13 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       return [
         {
           code: "uz",
-          flag: "🇺🇿",
+          codeBadge: "UZ",
           name: "O'zbekcha",
           subtitle: "Узбекский язык • Разговорный и грамматика",
         },
         {
           code: "en",
-          flag: "🇬🇧",
+          codeBadge: "EN",
           name: "English",
           subtitle: "Английский язык • Для работы и путешествий",
         },
@@ -37,13 +37,13 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       return [
         {
           code: "en",
-          flag: "🇬🇧",
+          codeBadge: "EN",
           name: "English",
           subtitle: "Ingliz tili • Xalqaro muloqot va sayohat",
         },
         {
           code: "ru",
-          flag: "🇷🇺",
+          codeBadge: "RU",
           name: "Русский",
           subtitle: "Rus tili • Muloqot va kundalik iboralar",
         },
@@ -107,7 +107,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             >
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <span className="text-3xl">🇷🇺</span>
+                  <span className="h-10 w-10 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] flex items-center justify-center font-bold text-xs text-[#4A4453] shrink-0">
+                    RU
+                  </span>
                   <div>
                     <h3 className="text-sm font-semibold text-[#4A4453]">Русский язык</h3>
                     <p className="text-xs text-[#8A8493]">Пояснения и правила будут на русском</p>
@@ -132,7 +134,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             >
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <span className="text-3xl">🇺🇿</span>
+                  <span className="h-10 w-10 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] flex items-center justify-center font-bold text-xs text-[#4A4453] shrink-0">
+                    UZ
+                  </span>
                   <div>
                     <h3 className="text-sm font-semibold text-[#4A4453]">O'zbek tili</h3>
                     <p className="text-xs text-[#8A8493]">Qoidalar va tushuntirishlar o'zbek tilida bo'ladi</p>
@@ -173,7 +177,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3.5">
-                    <span className="text-3xl">{opt.flag}</span>
+                    <span className="h-10 w-10 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] flex items-center justify-center font-bold text-xs text-[#4A4453] shrink-0">
+                      {opt.codeBadge}
+                    </span>
                     <div>
                       <h3 className="text-sm font-semibold text-[#4A4453]">{opt.name}</h3>
                       <p className="text-xs text-[#8A8493]">{opt.subtitle}</p>
