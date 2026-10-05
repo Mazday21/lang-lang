@@ -1,4 +1,5 @@
 import { detectLanguageFromText } from "@/lib/utils/language";
+import { callGeminiJSON } from "@/lib/ai/gemini";
 
 export interface GeneratedCard {
   front: string;
@@ -13,67 +14,8 @@ export interface GeneratedDeckResult {
   cards: GeneratedCard[];
 }
 
-function cleanAndParseDeckJSON(raw: string, defaultTopic: string): GeneratedDeckResult | null {
-  try {
-    let text = raw.trim();
-
-    if (text.startsWith("```")) {
-      text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-    }
-
-    const firstBrace = text.indexOf("{");
-    const lastBrace = text.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      text = text.substring(firstBrace, lastBrace + 1);
-    }
-
-    const parsed = JSON.parse(text);
-
-    if (
-      typeof parsed.deck_name === "string" &&
-      typeof parsed.description === "string" &&
-      Array.isArray(parsed.cards) &&
-      parsed.cards.length > 0
-    ) {
-      const validCards: GeneratedCard[] = parsed.cards
-        .filter(
-          (c: unknown) =>
-            c &&
-            typeof c === "object" &&
-            "front" in c &&
-            "back" in c &&
-            typeof (c as Record<string, unknown>).front === "string" &&
-            typeof (c as Record<string, unknown>).back === "string"
-        )
-        .map((c: Record<string, unknown>) => ({
-          front: String(c.front).trim(),
-          back: String(c.back).trim(),
-          rule_description: typeof c.rule_description === "string" ? c.rule_description.trim() : "",
-        }));
-
-      if (validCards.length > 0) {
-        const detectedLang = typeof parsed.target_language === "string"
-          ? parsed.target_language.trim()
-          : detectLanguageFromText(`${parsed.deck_name} ${defaultTopic}`);
-
-        return {
-          deck_name: parsed.deck_name.trim(),
-          description: parsed.description.trim(),
-          target_language: detectedLang,
-          cards: validCards,
-        };
-      }
-    }
-
-    return null;
-  } catch (err) {
-    console.warn("Failed to parse generated deck JSON:", raw, err);
-    return null;
-  }
-}
-
 /**
- * Fallback generator when OpenRouter API is unavailable or returns an error.
+ * Fallback generator when Gemini API is unavailable or returns an error.
  */
 function fallbackGenerateDeck(topic: string): GeneratedDeckResult {
   const cleanTopic = topic.trim();
@@ -114,14 +56,13 @@ function fallbackGenerateDeck(topic: string): GeneratedDeckResult {
 }
 
 /**
- * Generates an educational language deck using OpenRouter LLM.
+ * Generates an educational language deck using Google Gemini API (gemini-2.5-flash-lite).
  */
 export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckResult> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    console.warn("OPENROUTER_API_KEY is not set. Using fallback deck generator.");
+    console.warn("GEMINI_API_KEY is not set. Using fallback deck generator.");
     return fallbackGenerateDeck(topic);
   }
 
@@ -155,40 +96,28 @@ export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckRe
   const userPrompt = `Тема для изучения: "${topic}"`;
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://lang-lang.telegram",
-        "X-Title": "Language AI Trainer",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.6,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn("OpenRouter deck generator returned HTTP error:", response.status);
-      return fallbackGenerateDeck(topic);
+    const result = await callGeminiJSON<GeneratedDeckResult>(systemPrompt, userPrompt);
+    if (
+      result &&
+      typeof result.deck_name === "string" &&
+      typeof result.description === "string" &&
+      Array.isArray(result.cards) &&
+      result.cards.length > 0
+    ) {
+      return {
+        deck_name: result.deck_name.trim(),
+        description: result.description.trim(),
+        target_language: result.target_language || detectedLanguage,
+        cards: result.cards.map((c) => ({
+          front: String(c.front).trim(),
+          back: String(c.back).trim(),
+          rule_description: typeof c.rule_description === "string" ? c.rule_description.trim() : "",
+        })),
+      };
     }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) {
-      return fallbackGenerateDeck(topic);
-    }
-
-    const parsed = cleanAndParseDeckJSON(content, topic);
-    return parsed || fallbackGenerateDeck(topic);
+    return fallbackGenerateDeck(topic);
   } catch (err) {
-    console.error("Error generating deck with AI:", err);
+    console.error("Error generating deck with Gemini:", err);
     return fallbackGenerateDeck(topic);
   }
 }

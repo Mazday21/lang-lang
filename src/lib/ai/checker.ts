@@ -1,3 +1,5 @@
+import { callGeminiJSON } from "@/lib/ai/gemini";
+
 export interface AICheckResult {
   is_correct: boolean;
   explanation: string;
@@ -15,41 +17,7 @@ export interface CheckAnswerParams {
 }
 
 /**
- * Extracts and cleans JSON from LLM output.
- * Handles markdown formatting (```json ... ```) or accidental text surrounding the JSON.
- */
-function cleanAndParseJSON(raw: string): AICheckResult | null {
-  try {
-    let text = raw.trim();
-
-    // Strip markdown code fences if present
-    if (text.startsWith("```")) {
-      text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-    }
-
-    // Locate the first { and the last }
-    const firstBrace = text.indexOf("{");
-    const lastBrace = text.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      text = text.substring(firstBrace, lastBrace + 1);
-    }
-
-    const parsed = JSON.parse(text);
-
-    return {
-      is_correct: Boolean(parsed.is_correct),
-      explanation: typeof parsed.explanation === "string" ? parsed.explanation : "",
-      highlight_error: typeof parsed.highlight_error === "string" ? parsed.highlight_error : "",
-      stt_suspicious: Boolean(parsed.stt_suspicious),
-    };
-  } catch (err) {
-    console.warn("Failed to parse LLM JSON:", raw, err);
-    return null;
-  }
-}
-
-/**
- * Fallback heuristic checker when OpenRouter API key is missing or calls fail.
+ * Fallback heuristic checker when Gemini API key is missing or call fails.
  */
 function fallbackCheck(params: CheckAnswerParams): AICheckResult {
   const cleanInput = params.user_input.trim().toLowerCase().replace(/[.,!?'"«»]/g, "");
@@ -66,7 +34,7 @@ function fallbackCheck(params: CheckAnswerParams): AICheckResult {
     };
   }
 
-  // Heuristic: check if voice input seems cut off (length diff > 4 and input is short)
+  // Heuristic: check if voice input seems cut off
   const isCutOffVoice = Boolean(params.is_voice && cleanInput.length < 4 && cleanBack.length > 5);
 
   return {
@@ -80,14 +48,13 @@ function fallbackCheck(params: CheckAnswerParams): AICheckResult {
 }
 
 /**
- * Checks user answer using OpenRouter LLM.
+ * Checks user answer using Google Gemini API (gemini-2.5-flash-lite).
  */
 export async function checkAnswerWithAI(params: CheckAnswerParams): Promise<AICheckResult> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    console.warn("OPENROUTER_API_KEY is not set. Using local fallback checker.");
+    console.warn("GEMINI_API_KEY is not set. Using local fallback checker.");
     return fallbackCheck(params);
   }
 
@@ -100,7 +67,7 @@ export async function checkAnswerWithAI(params: CheckAnswerParams): Promise<AICh
 1. Проверяй соответствие корня слова, аффиксов времени, лица, числа, притяжательности и гармонии гласных.
 2. Незначительные опечатки в 1 букву, не меняющие морфему или смысл, можно простить или мягко отметить.
 3. ОШИБКИ МИКРОФОНА (stt_suspicious):
-   Если ученик отвечал голосом (is_voice=true) или ответ выглядит как типичная ослышка распознавания речи STT (например, вместо тюркского аффикса распозналось созвучное русское слово, проглочено окончание, паразитный звук или фоновый шум), ОБЯЗАТЕЛЬНО установи: "stt_suspicious": true.
+   Если ученик отвечал голосом (is_voice=true) или ответ выглядит как типичная ослышка распознавания речи (например, вместо целевого аффикса распозналось созвучное слово другого языка, проглочено окончание или фоновый шум), ОБЯЗАТЕЛЬНО установи: "stt_suspicious": true.
    Если это обычная грамматическая ошибка ученика: "stt_suspicious": false.
 
 ОТВЕТ ВЫДАВАЙ СТРОГО В ВИДЕ ЧИСТОГО JSON БЕЗ КАКИХ-ЛИБО ДРУГИХ СИМВОЛОВ И БЕЗ MARKDOWN:
@@ -121,48 +88,19 @@ export async function checkAnswerWithAI(params: CheckAnswerParams): Promise<AICh
   });
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://lang-lang.telegram",
-        "X-Title": "Language AI Trainer",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("OpenRouter API error:", response.status, errText);
+    const result = await callGeminiJSON<AICheckResult>(systemPrompt, userPrompt);
+    if (!result) {
       return fallbackCheck(params);
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      console.warn("OpenRouter returned empty message content.");
-      return fallbackCheck(params);
-    }
-
-    const parsed = cleanAndParseJSON(content);
-    if (!parsed) {
-      // Retry once if parse failed
-      return fallbackCheck(params);
-    }
-
-    return parsed;
+    return {
+      is_correct: Boolean(result.is_correct),
+      explanation: typeof result.explanation === "string" ? result.explanation : "",
+      highlight_error: typeof result.highlight_error === "string" ? result.highlight_error : "",
+      stt_suspicious: Boolean(result.stt_suspicious),
+    };
   } catch (error) {
-    console.error("Error calling OpenRouter:", error);
+    console.error("Error calling Gemini:", error);
     return fallbackCheck(params);
   }
 }
