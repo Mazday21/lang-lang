@@ -80,7 +80,17 @@ export default function HubPage() {
           fetch("/api/user/limits", { headers }),
         ]);
 
-        const decksData = await decksRes.json();
+        let decksData = await decksRes.json();
+
+        // If pair-filtered decks returned 0, try fetching all user decks as fallback so user is never locked out
+        if (decksData.success && (!decksData.decks || decksData.decks.length === 0)) {
+          const fallbackRes = await fetch("/api/decks", { headers });
+          const fallbackData = await fallbackRes.json();
+          if (fallbackData.success && fallbackData.decks && fallbackData.decks.length > 0) {
+            decksData = fallbackData;
+          }
+        }
+
         if (decksData.success) {
           setDecks(decksData.decks || []);
         }

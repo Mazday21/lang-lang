@@ -2,7 +2,11 @@ import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import { calculateSM2, SM2Grade } from "@/lib/sm2";
 import { STARTER_DECKS, SEED_DECKS } from "@/lib/data/seed-data";
 import { GeneratedDeckResult } from "@/lib/ai/deck-generator";
-import { detectLanguageFromText } from "@/lib/utils/language";
+import {
+  detectLanguageFromText,
+  isDeckMatchingPair,
+  extractLangTokens,
+} from "@/lib/utils/language";
 
 export interface DeckItem {
   id: string;
@@ -11,6 +15,7 @@ export interface DeckItem {
   native_language?: string;
   target_language: string;
   language_pair?: string;
+  is_starter?: boolean;
   is_dynamic: boolean;
   total_cards: number;
   due_cards: number;
@@ -42,6 +47,7 @@ interface MockStore {
       native_language: string;
       target_language: string;
       language_pair: string;
+      is_starter: boolean;
       is_dynamic: boolean;
     }
   >;
@@ -99,6 +105,7 @@ export async function seedStarterDecksForPair(
         native_language: nativeLang,
         target_language: targetLang,
         language_pair: pairKey,
+        is_starter: true,
         is_dynamic: true,
       });
 
@@ -133,13 +140,46 @@ export async function seedStarterDecksForPair(
         native_language: nativeLang,
         target_language: targetLang,
         language_pair: pairKey,
+        is_starter: true,
         is_dynamic: true,
       })
       .select("id")
       .single();
 
     if (deckErr || !deck) {
-      console.error("Failed to seed starter deck:", deckErr);
+      // If is_starter column fails, retry without it
+      const fallbackInsert = await supabase
+        .from("decks")
+        .insert({
+          user_id: userId,
+          title: seedDeck.title,
+          description: seedDeck.description,
+          native_language: nativeLang,
+          target_language: targetLang,
+          language_pair: pairKey,
+          is_dynamic: true,
+        })
+        .select("id")
+        .single();
+
+      if (fallbackInsert.error || !fallbackInsert.data) {
+        console.error("Failed to seed starter deck:", fallbackInsert.error);
+        continue;
+      }
+
+      const cardsToInsert = seedDeck.cards.map((c) => ({
+        user_id: userId,
+        deck_id: fallbackInsert.data.id,
+        front: c.front,
+        back: c.back,
+        rule_description: c.rule_description,
+        interval: 0,
+        repetitions: 0,
+        ease_factor: 2.5,
+        next_review_at: new Date().toISOString(),
+      }));
+
+      await supabase.from("cards").insert(cardsToInsert);
       continue;
     }
 
@@ -175,7 +215,7 @@ export async function updateUserLanguages(
   if (!isSupabaseConfigured()) {
     mockStore.userLanguages.set(userId, { native: nativeLang, target: targetLang });
     const existingDecks = Array.from(mockStore.decks.values()).filter(
-      (d) => d.user_id === userId && d.language_pair === pairKey
+      (d) => (d.user_id === userId || d.is_starter) && isDeckMatchingPair(d, pairKey)
     );
     if (existingDecks.length === 0) {
       await seedStarterDecksForPair(userId, nativeLang, targetLang);
@@ -193,14 +233,9 @@ export async function updateUserLanguages(
     })
     .eq("id", userId);
 
-  // Check if starter decks for this language pair already exist
-  const { count } = await supabase
-    .from("decks")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("language_pair", pairKey);
-
-  if ((count ?? 0) === 0) {
+  // Check if decks for this language pair already exist
+  const existingDecks = await getUserDecks(userId, pairKey);
+  if (existingDecks.length === 0) {
     await seedStarterDecksForPair(userId, nativeLang, targetLang);
   }
 
@@ -245,8 +280,9 @@ export async function ensureUserSeeded(userId: string): Promise<void> {
 }
 
 /**
- * Returns all decks for the user with count of due cards (next_review_at <= now).
- * If pair is specified, filters for that language pair.
+ * Returns decks for the user with count of due cards (next_review_at <= now).
+ * Returns user decks PLUS system starter decks (is_starter = true).
+ * Applies soft language pair filtering.
  */
 export async function getUserDecks(
   userId: string,
@@ -255,11 +291,20 @@ export async function getUserDecks(
   const nowIso = new Date().toISOString();
 
   if (!isSupabaseConfigured()) {
-    let userDecks = Array.from(mockStore.decks.values()).filter((d) => d.user_id === userId);
+    let userDecks = Array.from(mockStore.decks.values()).filter(
+      (d) => d.user_id === userId || d.is_starter
+    );
+
     if (pairFilter) {
-      userDecks = userDecks.filter((d) => !d.language_pair || d.language_pair === pairFilter);
+      const filtered = userDecks.filter((d) => isDeckMatchingPair(d, pairFilter));
+      if (filtered.length > 0) {
+        userDecks = filtered;
+      }
     }
-    const allCards = Array.from(mockStore.cards.values()).filter((c) => c.user_id === userId);
+
+    const allCards = Array.from(mockStore.cards.values()).filter(
+      (c) => c.user_id === userId || userDecks.some((d) => d.id === c.deck_id)
+    );
 
     return userDecks.map((d) => {
       const deckCards = allCards.filter((c) => c.deck_id === d.id);
@@ -271,6 +316,7 @@ export async function getUserDecks(
         native_language: d.native_language || "ru",
         target_language: d.target_language || detectLanguageFromText(d.title),
         language_pair: d.language_pair,
+        is_starter: Boolean(d.is_starter),
         is_dynamic: d.is_dynamic ?? true,
         total_cards: deckCards.length,
         due_cards: dueCards.length,
@@ -280,32 +326,80 @@ export async function getUserDecks(
 
   const supabase = getSupabaseAdminClient();
 
-  let query = supabase
-    .from("decks")
-    .select("id, title, description, native_language, target_language, language_pair, is_dynamic")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true });
+  let decks: Array<any> | null = null;
+  let decksErr: any = null;
 
-  if (pairFilter) {
-    query = query.eq("language_pair", pairFilter);
+  // Try querying user decks PLUS system starter decks (is_starter = true)
+  try {
+    const res = await supabase
+      .from("decks")
+      .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id")
+      .or(`user_id.eq.${userId},is_starter.eq.true`)
+      .order("created_at", { ascending: true });
+    decks = res.data;
+    decksErr = res.error;
+  } catch (err) {
+    decksErr = err;
   }
 
-  const { data: decks, error: decksErr } = await query;
+  // Fallback if is_starter column is not present in existing table
+  if (decksErr || !decks) {
+    const resFallback = await supabase
+      .from("decks")
+      .select("id, title, description, native_language, target_language, language_pair, is_dynamic, user_id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+    decks = resFallback.data;
+    decksErr = resFallback.error;
+  }
 
   if (decksErr || !decks) {
-    throw new Error(decksErr?.message || "Failed to fetch decks");
+    console.error("Failed to fetch decks from Supabase:", decksErr);
+    return [];
   }
 
-  const { data: cards, error: cardsErr } = await supabase
-    .from("cards")
-    .select("id, deck_id, next_review_at")
-    .eq("user_id", userId);
-
-  if (cardsErr) {
-    throw new Error(cardsErr.message);
+  // If user has 0 decks at all, auto-seed starter decks for pair if provided
+  if (decks.length === 0 && pairFilter) {
+    const tokens = extractLangTokens(pairFilter);
+    const native = tokens[0] || "ru";
+    const target = tokens[1] || "uz";
+    try {
+      await seedStarterDecksForPair(userId, native, target);
+      const reseeded = await supabase
+        .from("decks")
+        .select("id, title, description, native_language, target_language, language_pair, is_dynamic, user_id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+      if (reseeded.data && reseeded.data.length > 0) {
+        decks = reseeded.data;
+      }
+    } catch (seedErr) {
+      console.warn("Could not re-seed on empty query:", seedErr);
+    }
   }
 
-  return decks.map((deck) => {
+  // Soft language pair filtering
+  let matchedDecks = decks;
+  if (pairFilter) {
+    const filtered = decks.filter((deck) => isDeckMatchingPair(deck, pairFilter));
+    // If soft matching found decks, use them. If 0 found, fall back to all decks so user is never locked out!
+    if (filtered.length > 0) {
+      matchedDecks = filtered;
+    }
+  }
+
+  // Fetch cards for matched decks
+  const deckIds = matchedDecks.map((d) => d.id);
+  let cards: Array<any> | null = null;
+  if (deckIds.length > 0) {
+    const { data: cardsRes } = await supabase
+      .from("cards")
+      .select("id, deck_id, next_review_at")
+      .in("deck_id", deckIds);
+    cards = cardsRes;
+  }
+
+  return matchedDecks.map((deck) => {
     const deckCards = (cards || []).filter((c) => c.deck_id === deck.id);
     const dueCards = deckCards.filter((c) => c.next_review_at <= nowIso);
     return {
@@ -315,6 +409,7 @@ export async function getUserDecks(
       native_language: deck.native_language || "ru",
       target_language: deck.target_language || detectLanguageFromText(deck.title),
       language_pair: deck.language_pair,
+      is_starter: Boolean(deck.is_starter),
       is_dynamic: deck.is_dynamic ?? true,
       total_cards: deckCards.length,
       due_cards: dueCards.length,
@@ -324,6 +419,7 @@ export async function getUserDecks(
 
 /**
  * Returns cards for review in a specific deck.
+ * Supports both user decks and starter decks.
  */
 export async function getDeckCards(
   userId: string,
@@ -336,6 +432,7 @@ export async function getDeckCards(
     native_language?: string;
     target_language?: string;
     language_pair?: string;
+    is_starter?: boolean;
     is_dynamic?: boolean;
   };
   cards: CardItem[];
@@ -344,12 +441,12 @@ export async function getDeckCards(
 
   if (!isSupabaseConfigured()) {
     const deck = mockStore.decks.get(deckId);
-    if (!deck || deck.user_id !== userId) {
+    if (!deck || (deck.user_id !== userId && !deck.is_starter)) {
       throw new Error("Deck not found");
     }
 
     const deckCards = Array.from(mockStore.cards.values()).filter(
-      (c) => c.deck_id === deckId && c.user_id === userId
+      (c) => c.deck_id === deckId
     );
 
     let trainingCards = deckCards.filter((c) => c.next_review_at <= nowIso);
@@ -365,6 +462,7 @@ export async function getDeckCards(
         native_language: deck.native_language,
         target_language: deck.target_language || detectLanguageFromText(deck.title),
         language_pair: deck.language_pair,
+        is_starter: deck.is_starter,
         is_dynamic: deck.is_dynamic ?? true,
       },
       cards: trainingCards,
@@ -373,14 +471,23 @@ export async function getDeckCards(
 
   const supabase = getSupabaseAdminClient();
 
-  const { data: deck, error: deckErr } = await supabase
+  let deckRes = await supabase
     .from("decks")
-    .select("id, title, description, native_language, target_language, language_pair, is_dynamic")
+    .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id")
     .eq("id", deckId)
-    .eq("user_id", userId)
-    .single();
+    .or(`user_id.eq.${userId},is_starter.eq.true`)
+    .maybeSingle();
 
-  if (deckErr || !deck) {
+  if (!deckRes.data) {
+    deckRes = await supabase
+      .from("decks")
+      .select("id, title, description, native_language, target_language, language_pair, is_dynamic, user_id")
+      .eq("id", deckId)
+      .maybeSingle();
+  }
+
+  const deck = deckRes.data;
+  if (!deck) {
     throw new Error("Deck not found");
   }
 
@@ -388,7 +495,6 @@ export async function getDeckCards(
     .from("cards")
     .select("id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at")
     .eq("deck_id", deckId)
-    .eq("user_id", userId)
     .lte("next_review_at", nowIso)
     .order("next_review_at", { ascending: true });
 
@@ -401,7 +507,6 @@ export async function getDeckCards(
       .from("cards")
       .select("id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at")
       .eq("deck_id", deckId)
-      .eq("user_id", userId)
       .order("next_review_at", { ascending: true });
 
     if (allErr) throw new Error(allErr.message);
@@ -439,6 +544,7 @@ export async function createDeckWithCards(
       native_language: nativeLang,
       target_language: language,
       language_pair: pairKey,
+      is_starter: false,
       is_dynamic: true,
     });
 
@@ -474,6 +580,7 @@ export async function createDeckWithCards(
       target_language: language,
       language_pair: pairKey,
       is_dynamic: true,
+      is_starter: false,
     })
     .select("id, title")
     .single();
@@ -569,7 +676,6 @@ export async function updateCardReview(
     .from("cards")
     .select("id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at")
     .eq("id", cardId)
-    .eq("user_id", userId)
     .single();
 
   if (fetchErr || !currentCard) {
@@ -595,7 +701,6 @@ export async function updateCardReview(
       updated_at: new Date().toISOString(),
     })
     .eq("id", cardId)
-    .eq("user_id", userId)
     .select("id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at")
     .single();
 

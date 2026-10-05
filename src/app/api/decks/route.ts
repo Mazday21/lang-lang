@@ -6,13 +6,19 @@ export async function GET(req: NextRequest) {
   try {
     const userId = await getUserIdFromRequest(req);
     if (!userId) {
+      console.warn("GET /api/decks: Unauthorized request (no valid user_id)");
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const pair = searchParams.get("pair") || undefined;
 
+    console.log("GET /api/decks user.id:", userId, "filter pair:", pair);
+
     const decks = await getUserDecks(userId, pair);
+
+    console.log("GET /api/decks found:", decks?.length);
+
     return NextResponse.json({ success: true, decks });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to load decks";
