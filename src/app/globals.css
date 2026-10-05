@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #FDFBF7;
+  --color-foreground: #4A4453;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #4A4453;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #4A4453;
+  --color-primary: #C7E5C8;
+  --color-primary-foreground: #2A472C;
+  --color-secondary: #E0BBE4;
+  --color-secondary-foreground: #482C4E;
+  --color-muted: #F5EFEB;
+  --color-muted-foreground: #8A8493;
+  --color-accent: #E0BBE4;
+  --color-accent-foreground: #482C4E;
+  --color-destructive: #F7D6D0;
+  --color-destructive-foreground: #6B2E28;
+  --color-border: #E8E2D9;
+  --color-input: #E8E2D9;
+  --color-ring: #E0BBE4;
+  
+  --color-warm-bg: #FDFBF7;
+  --color-warm-card: #FFFFFF;
+  --color-warm-text: #4A4453;
+  --color-warm-muted: #8A8493;
+  --color-warm-border: #E8E2D9;
+  --color-soft-green: #C7E5C8;
+  --color-soft-green-text: #2A472C;
+  --color-soft-lavender: #E0BBE4;
+  --color-soft-lavender-text: #482C4E;
+  --color-soft-peach: #F7D6D0;
+  --color-soft-peach-text: #6B2E28;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
+}
+
+/* Telegram Mini App layout normalization */
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}

@@ -1,0 +1,186 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sparkles, X, Loader2, ArrowRight } from "lucide-react";
+
+interface CreateDeckModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  token?: string | null;
+  onLimitExceeded?: () => void;
+}
+
+const TOPIC_SUGGESTIONS = [
+  "Поход на базар Чорсу",
+  "Заказ плова и чая в чайхане",
+  "Поездка на такси в Ташкенте",
+  "Глаголы движения (bor-, kel-)",
+  "Знакомство и вежливые фразы",
+];
+
+export function CreateDeckModal({
+  isOpen,
+  onClose,
+  token,
+  onLimitExceeded,
+}: CreateDeckModalProps) {
+  const router = useRouter();
+  const [topic, setTopic] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!isOpen) return null;
+
+  const handleGenerate = async (selectedTopic?: string) => {
+    const finalTopic = (selectedTopic || topic).trim();
+    if (!finalTopic || isGenerating) return;
+
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/decks/generate", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ topic: finalTopic }),
+      });
+
+      const data = await res.json();
+
+      if (data.limit_exceeded || res.status === 403) {
+        onClose();
+        if (onLimitExceeded) onLimitExceeded();
+        return;
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Не удалось сгенерировать колоду");
+      }
+
+      // Success: navigate straight to training the new deck
+      onClose();
+      router.push(`/train/${data.deck_id}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ошибка генерации";
+      setError(msg);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/35 backdrop-blur-[2px] animate-in fade-in duration-200">
+      <Card className="w-full max-w-md border-[#E8E2D9] bg-[#FDFBF7] rounded-t-3xl sm:rounded-3xl shadow-xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+        <CardHeader className="pt-6 pb-2 px-6 relative">
+          <button
+            onClick={onClose}
+            disabled={isGenerating}
+            className="absolute top-5 right-5 h-8 w-8 rounded-full bg-[#F5EFEB] flex items-center justify-center text-[#8A8493] hover:text-[#4A4453] transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          <div className="h-12 w-12 rounded-2xl bg-[#E0BBE4]/30 text-[#482C4E] flex items-center justify-center mb-2">
+            <Sparkles className="h-6 w-6 text-[#482C4E]" />
+          </div>
+
+          <CardTitle className="text-lg font-semibold text-[#4A4453]">
+            Создать колоду с помощью ИИ
+          </CardTitle>
+          <CardDescription className="text-xs text-[#8A8493] leading-relaxed">
+            Укажите любую тему, и репетитор сгенерирует 5–7 карточек с примерами и правилами.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-4 px-6 pb-6 pt-2">
+          {/* Quick topic tags */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-[#8A8493] uppercase tracking-wider">
+              Популярные темы:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {TOPIC_SUGGESTIONS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  disabled={isGenerating}
+                  onClick={() => {
+                    setTopic(item);
+                  }}
+                  className="text-xs px-2.5 py-1 rounded-xl bg-white border border-[#E8E2D9] text-[#4A4453] hover:border-[#E0BBE4] active:scale-95 transition-all text-left"
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom topic input */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleGenerate();
+            }}
+            className="space-y-3 pt-1"
+          >
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-[#8A8493]">
+                Или введите свою тему:
+              </label>
+              <Input
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="например: Разговор в аэропорту, Числительные..."
+                disabled={isGenerating}
+                autoFocus
+                className="text-sm"
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs text-[#6B2E28] bg-[#FFF8F7] border border-[#F7D6D0] p-2.5 rounded-xl">
+                {error}
+              </p>
+            )}
+
+            {isGenerating && (
+              <div className="p-3 bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl flex items-center gap-2.5">
+                <Loader2 className="h-4 w-4 text-[#E0BBE4] animate-spin shrink-0" />
+                <p className="text-xs text-[#8A8493] leading-relaxed">
+                  ИИ составляет карточки и грамматические пояснения...
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="secondary"
+              size="lg"
+              disabled={!topic.trim() || isGenerating}
+              className="w-full text-sm font-semibold h-13 rounded-2xl flex items-center justify-center gap-2"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Генерируем...</span>
+                </>
+              ) : (
+                <>
+                  <span>Создать и начать тренировку</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

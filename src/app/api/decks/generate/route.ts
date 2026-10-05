@@ -1,0 +1,52 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getUserIdFromRequest } from "@/lib/auth/get-user-id";
+import { generateDeckWithAI } from "@/lib/ai/deck-generator";
+import { createDeckWithCards } from "@/lib/data/decks";
+import { checkAndConsumeAILimit } from "@/lib/limits";
+
+export async function POST(req: NextRequest) {
+  try {
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check & consume 1 AI request
+    const limitCheck = await checkAndConsumeAILimit(userId);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          limit_exceeded: true,
+          error: limitCheck.error || "Дневной лимит AI-генераций исчерпан",
+          limits: limitCheck,
+        },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json();
+    const topic = (body.topic || "").trim();
+
+    if (!topic) {
+      return NextResponse.json(
+        { success: false, error: "Укажите тему для генерации колоды" },
+        { status: 400 }
+      );
+    }
+
+    const deckResult = await generateDeckWithAI(topic);
+    const createdDeck = await createDeckWithCards(userId, deckResult);
+
+    return NextResponse.json({
+      success: true,
+      deck_id: createdDeck.id,
+      deck_name: createdDeck.title,
+      card_count: deckResult.cards.length,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to generate deck";
+    console.error("POST /api/decks/generate error:", err);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
