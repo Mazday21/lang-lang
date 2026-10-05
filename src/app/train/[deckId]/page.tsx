@@ -17,7 +17,7 @@ import {
   Send,
   Mic,
   Square,
-  Edit3,
+  Check,
   Loader2,
   AlertTriangle,
 } from "lucide-react";
@@ -25,6 +25,8 @@ import { CardItem } from "@/lib/data/decks";
 import { SM2Grade } from "@/lib/sm2";
 import { useAudioRecorder } from "@/hooks/use-audio-recorder";
 import { PaywallModal } from "@/components/paywall-modal";
+
+type TrainingViewMode = "unanswered" | "voice_retry" | "manual_correction" | "evaluated";
 
 /**
  * Normalizes answer string: trims, lowercases, removes punctuation and extra spaces
@@ -38,7 +40,7 @@ function normalizeAnswer(text: string): string {
 }
 
 /**
- * Checks answer locally without LLM calls.
+ * Checks answer strictly locally without LLM calls.
  * Supports multiple valid options separated by '/', ',', or ';'.
  */
 function checkAnswerLocally(userInput: string, expectedAnswer: string): boolean {
@@ -74,13 +76,13 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   // Card interaction state
   const [userAnswer, setUserAnswer] = useState<string>("");
-  const [isVoiceInput, setIsVoiceInput] = useState<boolean>(false);
-  const [isRevealed, setIsRevealed] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<TrainingViewMode>("unanswered");
+  const [voiceAttempts, setVoiceAttempts] = useState<number>(0);
   const [isCorrectResult, setIsCorrectResult] = useState<boolean>(false);
   const [isSubmittingGrade, setIsSubmittingGrade] = useState<boolean>(false);
   const [reviewedCount, setReviewedCount] = useState<number>(0);
 
-  // Soft paywall trigger (used when AI limits hit during audio transcription)
+  // Soft paywall trigger (only used if AI limits hit during voice transcription)
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -132,10 +134,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       setCards(data.cards || []);
       setCurrentIndex(0);
       setReviewedCount(0);
-      setIsRevealed(false);
+      setViewMode("unanswered");
+      setVoiceAttempts(0);
       setIsCorrectResult(false);
       setUserAnswer("");
-      setIsVoiceInput(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Ошибка загрузки карточек";
       setError(msg);
@@ -156,14 +158,13 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   /**
    * Fast local text check: ZERO LLM calls, ZERO limit consumed, instant response!
    */
-  const handleCheckAnswer = (textToCheck?: string, voiceUsed = false) => {
+  const handleCheckAnswer = (textToCheck?: string) => {
     const answer = (textToCheck !== undefined ? textToCheck : userAnswer).trim();
     if (!answer || !currentCard) return;
 
     const isMatch = checkAnswerLocally(answer, currentCard.back);
     setIsCorrectResult(isMatch);
-    setIsRevealed(true);
-    setIsVoiceInput(voiceUsed);
+    setViewMode("evaluated");
 
     // Haptic feedback in Telegram
     try {
@@ -176,9 +177,12 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   };
 
   /**
-   * Voice recording controls: uses Gemini API for transcription
+   * Voice recording controls with Gemini STT and 2-attempt flow
    */
   const toggleRecording = async () => {
+    // If 2 attempts already exhausted, microphone is locked
+    if (!isRecording && voiceAttempts >= 2) return;
+
     if (isRecording) {
       setIsTranscribing(true);
       const audioBlob = await stopRecording();
@@ -210,7 +214,37 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         if (data.success && data.text) {
           const transcribed = data.text.trim();
           setUserAnswer(transcribed);
-          handleCheckAnswer(transcribed, true);
+
+          const newAttemptCount = voiceAttempts + 1;
+          setVoiceAttempts(newAttemptCount);
+
+          // Local check of transcribed text
+          const isMatch = checkAnswerLocally(transcribed, currentCard.back);
+
+          if (isMatch) {
+            // Success on voice -> proceed straight to SM-2
+            setIsCorrectResult(true);
+            setViewMode("evaluated");
+            try {
+              window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred("success");
+            } catch {
+              // ignore
+            }
+          } else {
+            // Text did not match
+            if (newAttemptCount === 1) {
+              // Attempt 1 failed -> give exactly ONE retry voice attempt
+              setIsCorrectResult(false);
+              setViewMode("voice_retry");
+            } else {
+              // Attempt 2 failed -> lock mic, switch to manual correction mode
+              setIsCorrectResult(false);
+              setViewMode("manual_correction");
+              setTimeout(() => {
+                inputRef.current?.focus();
+              }, 100);
+            }
+          }
         } else {
           setError("Не удалось распознать речь. Попробуйте напечатать ответ.");
         }
@@ -223,7 +257,6 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
     } else {
       const started = await startRecording();
       if (started) {
-        setIsVoiceInput(true);
         try {
           window.Telegram?.WebApp?.HapticFeedback?.impactOccurred("light");
         } catch {
@@ -234,24 +267,18 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   };
 
   /**
-   * Soft Fallback: Retry voice
+   * Manual correction: check edited string locally
    */
-  const handleRetryVoice = async () => {
-    setIsRevealed(false);
-    setUserAnswer("");
-    setIsVoiceInput(true);
-    await startRecording();
+  const handleVerifyEditedText = () => {
+    handleCheckAnswer(userAnswer);
   };
 
   /**
-   * Soft Fallback: Edit by text
+   * Manual correction: user definitively accepts their answer as is
    */
-  const handleEditByText = () => {
-    setIsRevealed(false);
-    setIsVoiceInput(false);
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
+  const handleConfirmAsMyAnswer = () => {
+    setIsCorrectResult(false);
+    setViewMode("evaluated");
   };
 
   /**
@@ -286,10 +313,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       // Advance to next card immediately
       setCurrentIndex((prev) => prev + 1);
       setReviewedCount((prev) => prev + 1);
-      setIsRevealed(false);
+      setViewMode("unanswered");
+      setVoiceAttempts(0);
       setIsCorrectResult(false);
       setUserAnswer("");
-      setIsVoiceInput(false);
     } finally {
       setIsSubmittingGrade(false);
     }
@@ -378,9 +405,6 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   const progressPercent = Math.round(((currentIndex) / cards.length) * 100);
 
-  // Soft fallback trigger for voice when transcription didn't match
-  const isSoftVoiceFallback = Boolean(isRevealed && !isCorrectResult && isVoiceInput);
-
   return (
     <main className="min-h-screen bg-[#FDFBF7] text-[#4A4453] px-4 py-5 max-w-lg mx-auto flex flex-col gap-4">
       {/* Paywall Modal */}
@@ -436,72 +460,87 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             </p>
           </div>
 
-          {/* Instant Result when revealed */}
-          {isRevealed && (
+          {/* Evaluated Result when revealed */}
+          {viewMode === "evaluated" && (
             <div className="pt-3 border-t border-[#F5EFEB] space-y-3 animate-in fade-in duration-200">
-              {/* Soft Voice Fallback Notice */}
-              {isSoftVoiceFallback ? (
-                <div className="p-4 rounded-2xl bg-[#FFF8F7] border border-[#F7D6D0] space-y-2.5">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#6B2E28]">
-                    <AlertTriangle className="h-4 w-4 text-[#D9776E]" />
-                    <span>Распознано с возможной неточностью</span>
-                  </div>
-                  <p className="text-xs text-[#4A4453] leading-relaxed">
-                    Микрофон услышал: <span className="font-semibold text-[#6B2E28]">«{userAnswer}»</span>.
-                    Если это опечатка распознавания речи, вы можете исправить её текстом или наговорить заново без потери прогресса.
-                  </p>
-                </div>
-              ) : (
-                /* Direct instant status: Верно / Есть ошибка */
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-[#8A8493]">
-                      Результат
-                    </span>
-                    {isCorrectResult ? (
-                      <Badge variant="default" className="text-[11px] font-medium flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-[#2A472C]" />
-                        Верно
-                      </Badge>
-                    ) : (
-                      <Badge variant="peach" className="text-[11px] font-medium flex items-center gap-1">
-                        <XCircle className="h-3 w-3 text-[#6B2E28]" />
-                        Есть ошибка
-                      </Badge>
-                    )}
-                  </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[#8A8493]">
+                  Результат
+                </span>
+                {isCorrectResult ? (
+                  <Badge variant="default" className="text-[11px] font-medium flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-[#2A472C]" />
+                    Верно
+                  </Badge>
+                ) : (
+                  <Badge variant="peach" className="text-[11px] font-medium flex items-center gap-1">
+                    <XCircle className="h-3 w-3 text-[#6B2E28]" />
+                    Есть ошибка
+                  </Badge>
+                )}
+              </div>
 
-                  {/* Expected answer */}
-                  <div className="space-y-1">
-                    <span className="text-[11px] font-medium text-[#2A472C] uppercase tracking-wider">
-                      Правильный ответ
-                    </span>
-                    <p className="text-lg font-semibold text-[#2A472C]">
-                      {currentCard.back}
-                    </p>
-                  </div>
+              {/* Expected answer */}
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-[#2A472C] uppercase tracking-wider">
+                  Правильный ответ
+                </span>
+                <p className="text-lg font-semibold text-[#2A472C]">
+                  {currentCard.back}
+                </p>
+              </div>
 
-                  {/* User answer comparison if wrong */}
-                  {!isCorrectResult && userAnswer.trim() && (
-                    <div className="text-xs text-[#8A8493] pt-0.5">
-                      Ваш ответ: <span className="text-[#6B2E28] font-medium line-through">{userAnswer}</span>
-                    </div>
-                  )}
-
-                  {/* Grammar rule explanation */}
-                  {currentCard.rule_description && (
-                    <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs font-medium text-[#482C4E]">
-                        <Lightbulb className="h-3.5 w-3.5 text-[#E0BBE4]" />
-                        <span>Грамматическое правило</span>
-                      </div>
-                      <p className="text-xs text-[#4A4453] leading-relaxed">
-                        {currentCard.rule_description}
-                      </p>
-                    </div>
-                  )}
+              {/* User answer if wrong */}
+              {!isCorrectResult && userAnswer.trim() && (
+                <div className="text-xs text-[#8A8493] pt-0.5">
+                  Ваш ответ: <span className="text-[#6B2E28] font-medium line-through">{userAnswer}</span>
                 </div>
               )}
+
+              {/* Grammar rule explanation */}
+              {currentCard.rule_description && (
+                <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-[#482C4E]">
+                    <Lightbulb className="h-3.5 w-3.5 text-[#E0BBE4]" />
+                    <span>Грамматическое правило</span>
+                  </div>
+                  <p className="text-xs text-[#4A4453] leading-relaxed">
+                    {currentCard.rule_description}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Voice Attempt 1 Failed notice */}
+          {viewMode === "voice_retry" && (
+            <div className="pt-3 border-t border-[#F5EFEB] space-y-2.5 animate-in fade-in duration-200">
+              <div className="p-4 rounded-2xl bg-[#FFF8F7] border border-[#F7D6D0] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#6B2E28]">
+                  <AlertTriangle className="h-4 w-4 text-[#D9776E]" />
+                  <span>Текст не совпал с карточкой</span>
+                </div>
+                <p className="text-xs text-[#4A4453] leading-relaxed">
+                  Распознано: <span className="font-semibold text-[#6B2E28]">«{userAnswer}»</span>.
+                  Возможно, микрофон срезал звук или была опечатка. Вы можете наговорить ответ еще раз.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Voice Attempt 2 Failed notice -> Manual correction mode */}
+          {viewMode === "manual_correction" && (
+            <div className="pt-3 border-t border-[#F5EFEB] space-y-2.5 animate-in fade-in duration-200">
+              <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#482C4E]">
+                  <AlertTriangle className="h-4 w-4 text-[#E0BBE4]" />
+                  <span>Ручная корректировка (Микрофон заблокирован)</span>
+                </div>
+                <p className="text-xs text-[#8A8493] leading-relaxed">
+                  Мы услышали: <span className="font-semibold text-[#4A4453]">«{userAnswer}»</span>.
+                  Подправьте пару букв в поле ввода ниже или подтвердите ответ как есть.
+                </p>
+              </div>
             </div>
           )}
         </CardContent>
@@ -534,8 +573,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         </div>
       )}
 
-      {/* Interaction Area */}
-      {!isRevealed ? (
+      {/* Interaction Area based on viewMode */}
+      {viewMode === "unanswered" && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -551,10 +590,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               <Input
                 ref={inputRef}
                 value={userAnswer}
-                onChange={(e) => {
-                  setUserAnswer(e.target.value);
-                  setIsVoiceInput(false);
-                }}
+                onChange={(e) => setUserAnswer(e.target.value)}
                 placeholder="Введите ответ на изучаемом языке..."
                 autoFocus
                 disabled={isRecording || isTranscribing}
@@ -564,15 +600,21 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
                 type="button"
                 variant={isRecording ? "softPeach" : "outline"}
                 size="icon"
-                disabled={isTranscribing}
+                disabled={isTranscribing || voiceAttempts >= 2}
                 onClick={toggleRecording}
                 className="shrink-0 h-12 w-12 rounded-2xl relative"
-                title={isRecording ? "Остановить запись" : "Голосовой ответ"}
+                title={
+                  voiceAttempts >= 2
+                    ? "Голосовые попытки исчерпаны"
+                    : isRecording
+                    ? "Остановить запись"
+                    : "Голосовой ответ"
+                }
               >
                 {isRecording ? (
                   <Square className="h-4 w-4 text-[#6B2E28] fill-current" />
                 ) : (
-                  <Mic className="h-4 w-4 text-[#4A4453]" />
+                  <Mic className={`h-4 w-4 ${voiceAttempts >= 2 ? "text-[#8A8493] opacity-40" : "text-[#4A4453]"}`} />
                 )}
               </Button>
             </div>
@@ -589,35 +631,97 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             <Send className="h-4 w-4" />
           </Button>
         </form>
-      ) : isSoftVoiceFallback ? (
-        /* Soft Voice Fallback Actions */
+      )}
+
+      {/* View Mode: Voice Attempt 1 Failed -> One retry allowed */}
+      {viewMode === "voice_retry" && (
         <div className="space-y-2 mt-auto pt-2 animate-in fade-in duration-200">
-          <p className="text-xs text-center text-[#8A8493] font-medium">
-            Выберите удобный способ повторить:
-          </p>
-          <div className="grid grid-cols-2 gap-2.5">
+          <Button
+            type="button"
+            variant={isRecording ? "softPeach" : "secondary"}
+            size="lg"
+            disabled={isTranscribing}
+            onClick={toggleRecording}
+            className={`w-full text-xs sm:text-sm font-semibold h-13 rounded-2xl flex items-center justify-center gap-2 ${
+              isRecording
+                ? "bg-[#FFF3F0] text-[#6B2E28] border border-[#F7D6D0]"
+                : "bg-[#E0BBE4] text-[#482C4E]"
+            }`}
+          >
+            {isRecording ? (
+              <>
+                <Square className="h-4 w-4 text-[#6B2E28] fill-current" />
+                <span>Остановить запись</span>
+              </>
+            ) : (
+              <>
+                <Mic className="h-4 w-4" />
+                <span>Попробовать сказать еще раз (1/1)</span>
+              </>
+            )}
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isRecording || isTranscribing}
+            onClick={() => {
+              setViewMode("manual_correction");
+              setTimeout(() => inputRef.current?.focus(), 100);
+            }}
+            className="w-full text-xs text-[#8A8493]"
+          >
+            Ввести ответ текстом
+          </Button>
+        </div>
+      )}
+
+      {/* View Mode: Voice Attempt 2 Failed -> Manual correction with pre-filled text */}
+      {viewMode === "manual_correction" && (
+        <div className="space-y-3 mt-auto pt-2 animate-in fade-in duration-200">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[#8A8493] px-1">
+              Отредактируйте распознанный текст:
+            </label>
+            <Input
+              ref={inputRef}
+              value={userAnswer}
+              onChange={(e) => setUserAnswer(e.target.value)}
+              placeholder="Исправьте текст..."
+              autoFocus
+              className="text-sm w-full"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
             <Button
               type="button"
-              variant="secondary"
-              onClick={handleRetryVoice}
-              className="text-xs font-semibold h-12 flex items-center justify-center gap-1.5"
+              variant="default"
+              size="lg"
+              disabled={!userAnswer.trim()}
+              onClick={handleVerifyEditedText}
+              className="text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-1.5"
             >
-              <Mic className="h-3.5 w-3.5" />
-              <span>Повторить голосом</span>
+              <Check className="h-4 w-4" />
+              <span>Проверить исправленный текст</span>
             </Button>
+
             <Button
               type="button"
               variant="outline"
-              onClick={handleEditByText}
-              className="text-xs font-semibold h-12 flex items-center justify-center gap-1.5"
+              size="lg"
+              onClick={handleConfirmAsMyAnswer}
+              className="text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-1.5"
             >
-              <Edit3 className="h-3.5 w-3.5" />
-              <span>Исправить текстом</span>
+              <span>Да, это мой ответ</span>
             </Button>
           </div>
         </div>
-      ) : (
-        /* Standard SM-2 4-button Rating block */
+      )}
+
+      {/* View Mode: Evaluated -> Show SM-2 4-button rating block */}
+      {viewMode === "evaluated" && (
         <div className="space-y-2.5 mt-auto pt-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <p className="text-xs font-medium text-center text-[#8A8493]">
             Оцените, насколько легко было вспомнить:
