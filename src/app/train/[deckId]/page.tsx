@@ -11,23 +11,52 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   CheckCircle2,
+  XCircle,
   RotateCcw,
   Lightbulb,
   Send,
   Mic,
   Square,
-  Sparkles,
   Edit3,
   Loader2,
   AlertTriangle,
-  Zap,
 } from "lucide-react";
 import { CardItem } from "@/lib/data/decks";
 import { SM2Grade } from "@/lib/sm2";
-import { AICheckResult } from "@/lib/ai/checker";
-import { DynamicContextResult } from "@/lib/ai/generator";
 import { useAudioRecorder } from "@/hooks/use-audio-recorder";
 import { PaywallModal } from "@/components/paywall-modal";
+
+/**
+ * Normalizes answer string: trims, lowercases, removes punctuation and extra spaces
+ */
+function normalizeAnswer(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?'"«»—–]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Checks answer locally without LLM calls.
+ * Supports multiple valid options separated by '/', ',', or ';'.
+ */
+function checkAnswerLocally(userInput: string, expectedAnswer: string): boolean {
+  const normUser = normalizeAnswer(userInput);
+  const normExpected = normalizeAnswer(expectedAnswer);
+
+  if (!normUser || !normExpected) return false;
+
+  if (normUser === normExpected) return true;
+
+  // Split alternatives like "Salom / Assalomu alaykum"
+  const alternatives = expectedAnswer
+    .split(/[\/,;]+/)
+    .map(normalizeAnswer)
+    .filter(Boolean);
+
+  return alternatives.includes(normUser);
+}
 
 export default function TrainPage({ params }: { params: Promise<{ deckId: string }> }) {
   const resolvedParams = use(params);
@@ -38,31 +67,25 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   const [deckTitle, setDeckTitle] = useState<string>("");
   const [targetLanguage, setTargetLanguage] = useState<string>("узбекский");
-  const [isDeckDynamic, setIsDeckDynamic] = useState<boolean>(true);
   const [cards, setCards] = useState<CardItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Dynamic context generation state
-  const [dynamicContext, setDynamicContext] = useState<DynamicContextResult | null>(null);
-  const [isGeneratingContext, setIsGeneratingContext] = useState<boolean>(false);
-
   // Card interaction state
   const [userAnswer, setUserAnswer] = useState<string>("");
   const [isVoiceInput, setIsVoiceInput] = useState<boolean>(false);
-  const [isChecking, setIsChecking] = useState<boolean>(false);
   const [isRevealed, setIsRevealed] = useState<boolean>(false);
-  const [aiResult, setAiResult] = useState<AICheckResult | null>(null);
+  const [isCorrectResult, setIsCorrectResult] = useState<boolean>(false);
   const [isSubmittingGrade, setIsSubmittingGrade] = useState<boolean>(false);
   const [reviewedCount, setReviewedCount] = useState<number>(0);
 
-  // Soft paywall trigger
+  // Soft paywall trigger (used when AI limits hit during audio transcription)
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Audio recording hook
+  // Audio recording hook (Gemini STT)
   const {
     isRecording,
     permissionDenied,
@@ -106,13 +129,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
       setDeckTitle(data.deck?.title || "Колода");
       setTargetLanguage(data.deck?.target_language || "узбекский");
-      setIsDeckDynamic(data.deck?.is_dynamic ?? true);
       setCards(data.cards || []);
       setCurrentIndex(0);
       setReviewedCount(0);
       setIsRevealed(false);
-      setAiResult(null);
-      setDynamicContext(null);
+      setIsCorrectResult(false);
       setUserAnswer("");
       setIsVoiceInput(false);
     } catch (err: unknown) {
@@ -133,118 +154,29 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   const isFinished = !isLoading && cards.length > 0 && currentIndex >= cards.length;
 
   /**
-   * Fetches dynamic context for the active card if deck is dynamic
+   * Fast local text check: ZERO LLM calls, ZERO limit consumed, instant response!
    */
-  const fetchDynamicContextForCard = useCallback(async (card: CardItem) => {
-    if (!isDeckDynamic) {
-      setDynamicContext(null);
-      return;
-    }
-
-    setIsGeneratingContext(true);
-    try {
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const res = await fetch("/api/generate-context", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          front: card.front,
-          back: card.back,
-          rule_description: card.rule_description,
-          deck_title: deckTitle,
-          target_language: targetLanguage,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.limit_exceeded || res.status === 403) {
-        setShowPaywall(true);
-        return;
-      }
-
-      if (data.success && data.result) {
-        setDynamicContext(data.result);
-      } else {
-        setDynamicContext(null);
-      }
-    } catch (err) {
-      console.warn("Failed to generate dynamic context:", err);
-      setDynamicContext(null);
-    } finally {
-      setIsGeneratingContext(false);
-    }
-  }, [isDeckDynamic, token, deckTitle]);
-
-  // Trigger dynamic generation when card index changes
-  useEffect(() => {
-    if (currentCard && !isFinished) {
-      fetchDynamicContextForCard(currentCard);
-    }
-  }, [currentCard, isFinished, fetchDynamicContextForCard]);
-
-  /**
-   * Submits user answer for AI verification (OpenRouter)
-   */
-  const handleCheckAnswer = async (textToCheck?: string, voiceUsed = false) => {
+  const handleCheckAnswer = (textToCheck?: string, voiceUsed = false) => {
     const answer = (textToCheck !== undefined ? textToCheck : userAnswer).trim();
-    if (!answer || !currentCard || isChecking) return;
+    if (!answer || !currentCard) return;
 
-    setIsChecking(true);
-    setError(null);
+    const isMatch = checkAnswerLocally(answer, currentCard.back);
+    setIsCorrectResult(isMatch);
+    setIsRevealed(true);
+    setIsVoiceInput(voiceUsed);
 
-    const targetFront = dynamicContext?.sentence_with_blank || currentCard.front;
-    const targetBack = dynamicContext?.expected_answer || currentCard.back;
-
+    // Haptic feedback in Telegram
     try {
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const res = await fetch("/api/check", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          front: targetFront,
-          back: targetBack,
-          rule_description: currentCard.rule_description,
-          user_input: answer,
-          is_voice: voiceUsed || isVoiceInput,
-          target_language: targetLanguage,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.limit_exceeded || res.status === 403) {
-        setShowPaywall(true);
-        return;
-      }
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Не удалось проверить ответ");
-      }
-
-      setAiResult(data.result);
-      setIsRevealed(true);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ошибка при проверке";
-      console.warn("AI Check error:", msg);
-      // Fallback: reveal static answer without blocking
-      setAiResult({
-        is_correct: answer.toLowerCase() === targetBack.toLowerCase(),
-        explanation: currentCard.rule_description || `Правильный ответ: ${targetBack}`,
-        highlight_error: "",
-        stt_suspicious: false,
-      });
-      setIsRevealed(true);
-    } finally {
-      setIsChecking(false);
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred(
+        isMatch ? "success" : "warning"
+      );
+    } catch {
+      // ignore
     }
   };
 
   /**
-   * Voice recording controls: click to start or stop
+   * Voice recording controls: uses Gemini API for transcription
    */
   const toggleRecording = async () => {
     if (isRecording) {
@@ -260,9 +192,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         const formData = new FormData();
         formData.append("file", audioBlob, "speech.webm");
         formData.append("targetLanguage", targetLanguage);
-        const expected = dynamicContext?.expected_answer || currentCard?.back || "";
-        if (expected) {
-          formData.append("prompt", expected);
+        if (currentCard?.back) {
+          formData.append("prompt", currentCard.back);
         }
 
         const res = await fetch("/api/speech/transcribe", {
@@ -271,11 +202,15 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         });
 
         const data = await res.json();
+        if (data.limit_exceeded || res.status === 403) {
+          setShowPaywall(true);
+          return;
+        }
+
         if (data.success && data.text) {
           const transcribed = data.text.trim();
           setUserAnswer(transcribed);
-          setIsVoiceInput(true);
-          await handleCheckAnswer(transcribed, true);
+          handleCheckAnswer(transcribed, true);
         } else {
           setError("Не удалось распознать речь. Попробуйте напечатать ответ.");
         }
@@ -299,22 +234,20 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   };
 
   /**
-   * Soft Fallback Action 1: Re-record voice
+   * Soft Fallback: Retry voice
    */
   const handleRetryVoice = async () => {
     setIsRevealed(false);
-    setAiResult(null);
     setUserAnswer("");
     setIsVoiceInput(true);
     await startRecording();
   };
 
   /**
-   * Soft Fallback Action 2: Edit transcribed text manually
+   * Soft Fallback: Edit by text
    */
   const handleEditByText = () => {
     setIsRevealed(false);
-    setAiResult(null);
     setIsVoiceInput(false);
     setTimeout(() => {
       inputRef.current?.focus();
@@ -350,12 +283,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         body: JSON.stringify({ grade }),
       }).catch((err) => console.error("Error saving SM-2:", err));
 
-      // Advance to next card
+      // Advance to next card immediately
       setCurrentIndex((prev) => prev + 1);
       setReviewedCount((prev) => prev + 1);
       setIsRevealed(false);
-      setAiResult(null);
-      setDynamicContext(null);
+      setIsCorrectResult(false);
       setUserAnswer("");
       setIsVoiceInput(false);
     } finally {
@@ -446,18 +378,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   const progressPercent = Math.round(((currentIndex) / cards.length) * 100);
 
-  // Soft fallback trigger
-  const isSoftFallback = Boolean(
-    isRevealed &&
-    aiResult &&
-    !aiResult.is_correct &&
-    aiResult.stt_suspicious &&
-    isVoiceInput
-  );
-
-  const displayQuestion = dynamicContext?.sentence_with_blank || currentCard.front;
-  const displayContextTranslation = dynamicContext?.translation;
-  const expectedAnswer = dynamicContext?.expected_answer || currentCard.back;
+  // Soft fallback trigger for voice when transcription didn't match
+  const isSoftVoiceFallback = Boolean(isRevealed && !isCorrectResult && isVoiceInput);
 
   return (
     <main className="min-h-screen bg-[#FDFBF7] text-[#4A4453] px-4 py-5 max-w-lg mx-auto flex flex-col gap-4">
@@ -491,126 +413,91 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-wider text-[#8A8493] font-medium">
-              Колода
-            </p>
-            <h1 className="text-base font-semibold text-[#4A4453] truncate">
-              {deckTitle}
-            </h1>
-          </div>
-          {isDeckDynamic && (
-            <Badge variant="secondary" className="text-[10px] py-0.5 px-2 font-normal flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-[#482C4E]" />
-              Динамический ИИ
-            </Badge>
-          )}
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-[#8A8493] font-medium">
+            Колода
+          </p>
+          <h1 className="text-base font-semibold text-[#4A4453] truncate">
+            {deckTitle}
+          </h1>
         </div>
       </header>
 
       {/* Main Flashcard */}
       <Card className="border-[#E8E2D9] bg-white rounded-2xl shadow-none">
         <CardContent className="p-6 space-y-4">
-          {/* Question / Dynamic context */}
-          <div className="space-y-2">
+          {/* Question */}
+          <div className="space-y-1.5">
             <span className="text-[11px] font-medium text-[#8A8493] uppercase tracking-wider">
-              {dynamicContext ? "Заполните пропуск в предложении" : "Задание"}
+              Задание
             </span>
-
-            {isGeneratingContext ? (
-              <div className="space-y-2 py-1">
-                <Skeleton className="h-7 w-3/4 rounded-xl" />
-                <Skeleton className="h-4 w-1/2 rounded-xl" />
-                <p className="text-[11px] text-[#8A8493] flex items-center gap-1.5">
-                  <Sparkles className="h-3 w-3 text-[#E0BBE4] animate-spin" />
-                  Нейросеть генерирует контекстный пример...
-                </p>
-              </div>
-            ) : (
-              <>
-                <p className="text-xl font-medium text-[#4A4453] leading-snug">
-                  {displayQuestion}
-                </p>
-                {displayContextTranslation && (
-                  <p className="text-xs text-[#8A8493] italic">
-                    Контекст: «{displayContextTranslation}»
-                  </p>
-                )}
-              </>
-            )}
+            <p className="text-xl font-medium text-[#4A4453] leading-snug">
+              {currentCard.front}
+            </p>
           </div>
 
-          {/* AI Verification Results when revealed */}
-          {isRevealed && aiResult && (
+          {/* Instant Result when revealed */}
+          {isRevealed && (
             <div className="pt-3 border-t border-[#F5EFEB] space-y-3 animate-in fade-in duration-200">
-              {/* Case A: Soft Fallback */}
-              {isSoftFallback ? (
+              {/* Soft Voice Fallback Notice */}
+              {isSoftVoiceFallback ? (
                 <div className="p-4 rounded-2xl bg-[#FFF8F7] border border-[#F7D6D0] space-y-2.5">
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#6B2E28]">
                     <AlertTriangle className="h-4 w-4 text-[#D9776E]" />
-                    <span>Мы не расслышали окончание</span>
+                    <span>Распознано с возможной неточностью</span>
                   </div>
                   <p className="text-xs text-[#4A4453] leading-relaxed">
-                    Распознано: <span className="font-semibold text-[#6B2E28]">«{userAnswer}»</span>.
-                    Похоже, микрофон срезал звук или фоновый шум помешал распознаванию. Прогресс карточки не пострадал.
+                    Микрофон услышал: <span className="font-semibold text-[#6B2E28]">«{userAnswer}»</span>.
+                    Если это опечатка распознавания речи, вы можете исправить её текстом или наговорить заново без потери прогресса.
                   </p>
                 </div>
               ) : (
-                /* Case B: Regular AI Feedback */
+                /* Direct instant status: Верно / Есть ошибка */
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-medium uppercase tracking-wider text-[#8A8493]">
-                      Вердикт репетитора
+                      Результат
                     </span>
-                    {aiResult.is_correct ? (
+                    {isCorrectResult ? (
                       <Badge variant="default" className="text-[11px] font-medium flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3 text-[#2A472C]" />
                         Верно
                       </Badge>
                     ) : (
-                      <Badge variant="peach" className="text-[11px] font-medium">
+                      <Badge variant="peach" className="text-[11px] font-medium flex items-center gap-1">
+                        <XCircle className="h-3 w-3 text-[#6B2E28]" />
                         Есть ошибка
                       </Badge>
                     )}
                   </div>
 
-                  {/* AI Explanation */}
-                  <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-1">
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-[#482C4E]">
-                      <Sparkles className="h-3.5 w-3.5 text-[#E0BBE4]" />
-                      <span>Разбор ответа</span>
-                    </div>
-                    <p className="text-xs text-[#4A4453] leading-relaxed">
-                      {aiResult.explanation}
-                    </p>
-                    {aiResult.highlight_error && (
-                      <p className="text-xs text-[#6B2E28] pt-1">
-                        Неточность: <span className="font-mono bg-[#F7D6D0] px-1 py-0.5 rounded text-[11px]">{aiResult.highlight_error}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Expected answer & rule */}
+                  {/* Expected answer */}
                   <div className="space-y-1">
                     <span className="text-[11px] font-medium text-[#2A472C] uppercase tracking-wider">
-                      Ожидаемый ответ
+                      Правильный ответ
                     </span>
-                    <p className="text-base font-semibold text-[#2A472C]">
-                      {expectedAnswer}
+                    <p className="text-lg font-semibold text-[#2A472C]">
+                      {currentCard.back}
                     </p>
                   </div>
 
-                  {currentCard.rule_description && (
-                    <div className="text-xs text-[#8A8493] flex items-start gap-1.5 pt-0.5">
-                      <Lightbulb className="h-3.5 w-3.5 text-[#E0BBE4] shrink-0 mt-0.5" />
-                      <span>{currentCard.rule_description}</span>
+                  {/* User answer comparison if wrong */}
+                  {!isCorrectResult && userAnswer.trim() && (
+                    <div className="text-xs text-[#8A8493] pt-0.5">
+                      Ваш ответ: <span className="text-[#6B2E28] font-medium line-through">{userAnswer}</span>
                     </div>
                   )}
 
-                  {userAnswer.trim() && (
-                    <div className="text-xs text-[#8A8493] pt-0.5">
-                      Ваш ввод: <span className="text-[#4A4453] font-medium">{userAnswer}</span>
+                  {/* Grammar rule explanation */}
+                  {currentCard.rule_description && (
+                    <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-[#482C4E]">
+                        <Lightbulb className="h-3.5 w-3.5 text-[#E0BBE4]" />
+                        <span>Грамматическое правило</span>
+                      </div>
+                      <p className="text-xs text-[#4A4453] leading-relaxed">
+                        {currentCard.rule_description}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -642,17 +529,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         <div className="flex items-center justify-center gap-2 p-3 bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl">
           <Loader2 className="h-3.5 w-3.5 text-[#E0BBE4] animate-spin" />
           <p className="text-xs font-medium text-[#8A8493]">
-            Распознаем речь (Whisper)...
-          </p>
-        </div>
-      )}
-
-      {/* Checking status */}
-      {isChecking && (
-        <div className="flex items-center justify-center gap-2 p-3 bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl">
-          <Loader2 className="h-3.5 w-3.5 text-[#E0BBE4] animate-spin" />
-          <p className="text-xs font-medium text-[#8A8493]">
-            ИИ-репетитор проверяет ответ...
+            Распознаем речь (Gemini)...
           </p>
         </div>
       )}
@@ -668,7 +545,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         >
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-[#8A8493] px-1">
-              Ваш ответ:
+              Ваш перевод или ответ:
             </label>
             <div className="flex gap-2">
               <Input
@@ -678,16 +555,16 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
                   setUserAnswer(e.target.value);
                   setIsVoiceInput(false);
                 }}
-                placeholder="Вставьте пропущенное слово / суффикс..."
+                placeholder="Введите ответ на изучаемом языке..."
                 autoFocus
-                disabled={isChecking || isRecording || isTranscribing || isGeneratingContext}
+                disabled={isRecording || isTranscribing}
                 className="text-sm flex-1"
               />
               <Button
                 type="button"
                 variant={isRecording ? "softPeach" : "outline"}
                 size="icon"
-                disabled={isChecking || isTranscribing || isGeneratingContext}
+                disabled={isTranscribing}
                 onClick={toggleRecording}
                 className="shrink-0 h-12 w-12 rounded-2xl relative"
                 title={isRecording ? "Остановить запись" : "Голосовой ответ"}
@@ -705,24 +582,15 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             type="submit"
             variant="default"
             size="lg"
-            disabled={!userAnswer.trim() || isChecking || isRecording || isTranscribing || isGeneratingContext}
+            disabled={!userAnswer.trim() || isRecording || isTranscribing}
             className="w-full text-sm font-semibold flex items-center justify-center gap-2"
           >
-            {isChecking ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Проверяем...</span>
-              </>
-            ) : (
-              <>
-                <span>Проверить ответ</span>
-                <Send className="h-4 w-4" />
-              </>
-            )}
+            <span>Проверить ответ</span>
+            <Send className="h-4 w-4" />
           </Button>
         </form>
-      ) : isSoftFallback ? (
-        /* Soft Fallback Actions (No SM-2 penalty!) */
+      ) : isSoftVoiceFallback ? (
+        /* Soft Voice Fallback Actions */
         <div className="space-y-2 mt-auto pt-2 animate-in fade-in duration-200">
           <p className="text-xs text-center text-[#8A8493] font-medium">
             Выберите удобный способ повторить:
