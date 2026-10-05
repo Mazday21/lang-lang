@@ -11,6 +11,7 @@ export interface CheckAnswerParams {
   rule_description?: string | null;
   user_input: string;
   is_voice?: boolean;
+  target_language?: string;
 }
 
 /**
@@ -90,8 +91,9 @@ export async function checkAnswerWithAI(params: CheckAnswerParams): Promise<AICh
     return fallbackCheck(params);
   }
 
-  const systemPrompt = `Ты — добрый, спокойный личный репетитор языков (узбекский, татарский и другие).
-Твоя задача — объективно проверить ответ ученика на грамматическую и смысловую корректность.
+  const targetLang = params.target_language || "узбекский";
+  const systemPrompt = `Ты — добрый, спокойный личный репетитор языков (изучаемый язык: ${targetLang}).
+Твоя задача — объективно проверить ответ ученика на грамматическую и смысловую корректность на языке: ${targetLang}.
 Твой тон — спокойный, поддерживающий, без агрессии и без критики.
 
 ОСОБЕННОСТИ ПРОВЕРКИ:
@@ -110,6 +112,7 @@ export async function checkAnswerWithAI(params: CheckAnswerParams): Promise<AICh
 }`;
 
   const userPrompt = JSON.stringify({
+    target_language: targetLang,
     task: params.front,
     expected_answer: params.back,
     rule_context: params.rule_description || null,

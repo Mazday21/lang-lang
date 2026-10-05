@@ -37,6 +37,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   const { token, isLoading: isAuthLoading } = useAuth();
 
   const [deckTitle, setDeckTitle] = useState<string>("");
+  const [targetLanguage, setTargetLanguage] = useState<string>("узбекский");
   const [isDeckDynamic, setIsDeckDynamic] = useState<boolean>(true);
   const [cards, setCards] = useState<CardItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -104,6 +105,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       }
 
       setDeckTitle(data.deck?.title || "Колода");
+      setTargetLanguage(data.deck?.target_language || "узбекский");
       setIsDeckDynamic(data.deck?.is_dynamic ?? true);
       setCards(data.cards || []);
       setCurrentIndex(0);
@@ -152,6 +154,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
           back: card.back,
           rule_description: card.rule_description,
           deck_title: deckTitle,
+          target_language: targetLanguage,
         }),
       });
 
@@ -207,6 +210,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
           rule_description: currentCard.rule_description,
           user_input: answer,
           is_voice: voiceUsed || isVoiceInput,
+          target_language: targetLanguage,
         }),
       });
 
@@ -255,6 +259,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       try {
         const formData = new FormData();
         formData.append("file", audioBlob, "speech.webm");
+        formData.append("targetLanguage", targetLanguage);
         const expected = dynamicContext?.expected_answer || currentCard?.back || "";
         if (expected) {
           formData.append("prompt", expected);

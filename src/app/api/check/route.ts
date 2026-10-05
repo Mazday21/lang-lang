@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { front, back, rule_description, user_input, is_voice } = body;
+    const { front, back, rule_description, user_input, is_voice, target_language } = body;
 
     if (!user_input || typeof user_input !== "string" || !user_input.trim()) {
       return NextResponse.json(
@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
       rule_description,
       user_input: user_input.trim(),
       is_voice: Boolean(is_voice),
+      target_language,
     });
 
     return NextResponse.json({

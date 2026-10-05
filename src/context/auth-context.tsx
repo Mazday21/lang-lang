@@ -8,6 +8,7 @@ export interface UserProfile {
   telegram_id: number;
   first_name?: string;
   username?: string;
+  language_code?: string;
 }
 
 interface AuthContextType {

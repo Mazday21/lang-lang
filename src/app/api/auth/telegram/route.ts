@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
           telegram_id: mockTelegramId,
           first_name: mockFirstName,
           username: mockUsername,
+          language_code: "uz",
         },
         token,
         isDev: true,
@@ -102,6 +103,7 @@ export async function POST(req: NextRequest) {
           telegram_id: tgUser.id,
           first_name: tgUser.first_name,
           username: tgUser.username,
+          language_code: tgUser.language_code,
         },
         token: "unconfigured-supabase-token",
         warning: "Supabase environment variables not configured yet.",
@@ -133,6 +135,7 @@ export async function POST(req: NextRequest) {
         telegram_id: dbUser.telegram_id,
         first_name: dbUser.first_name,
         username: dbUser.username,
+        language_code: tgUser.language_code,
       },
       token,
     });

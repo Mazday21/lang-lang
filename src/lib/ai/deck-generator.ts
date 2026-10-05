@@ -1,3 +1,5 @@
+import { detectLanguageFromText } from "@/lib/utils/language";
+
 export interface GeneratedCard {
   front: string;
   back: string;
@@ -7,10 +9,11 @@ export interface GeneratedCard {
 export interface GeneratedDeckResult {
   deck_name: string;
   description: string;
+  target_language?: string;
   cards: GeneratedCard[];
 }
 
-function cleanAndParseDeckJSON(raw: string): GeneratedDeckResult | null {
+function cleanAndParseDeckJSON(raw: string, defaultTopic: string): GeneratedDeckResult | null {
   try {
     let text = raw.trim();
 
@@ -49,9 +52,14 @@ function cleanAndParseDeckJSON(raw: string): GeneratedDeckResult | null {
         }));
 
       if (validCards.length > 0) {
+        const detectedLang = typeof parsed.target_language === "string"
+          ? parsed.target_language.trim()
+          : detectLanguageFromText(`${parsed.deck_name} ${defaultTopic}`);
+
         return {
           deck_name: parsed.deck_name.trim(),
           description: parsed.description.trim(),
+          target_language: detectedLang,
           cards: validCards,
         };
       }
@@ -69,10 +77,12 @@ function cleanAndParseDeckJSON(raw: string): GeneratedDeckResult | null {
  */
 function fallbackGenerateDeck(topic: string): GeneratedDeckResult {
   const cleanTopic = topic.trim();
+  const detectedLang = detectLanguageFromText(cleanTopic);
 
   return {
     deck_name: cleanTopic.length > 30 ? cleanTopic.slice(0, 30) + "..." : cleanTopic,
     description: `Обучающая колода по теме: ${cleanTopic}`,
+    target_language: detectedLang,
     cards: [
       {
         front: "Сколько это стоит? (Узбекский: базар)",
@@ -115,20 +125,24 @@ export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckRe
     return fallbackGenerateDeck(topic);
   }
 
-  const systemPrompt = `Ты — эксперт-лингвист и преподаватель языков (с фокусом на узбекский, татарский, русский и другие языки).
+  const detectedLanguage = detectLanguageFromText(topic);
+
+  const systemPrompt = `Ты — эксперт-лингвист и преподаватель языков (с фокусом на узбекский, татарский, английский, русский и другие языки).
 Твоя задача — составить практическую обучающую колоду карточек для интервального повторения по теме, заданной пользователем.
-Если в теме явно не указан язык, составь колоду для изучения узбекского языка (с переводом и пояснениями на русском).
+Если в теме явно не указан язык, ориентируйся на: "${detectedLanguage}".
 
 ТРЕБОВАНИЯ:
 1. Сгенерируй 5-7 полезных карточек по заданной теме.
 2. front: Задание или русская фраза с указанием контекста/слова.
 3. back: Естественная фраза или форма на изучаемом языке.
 4. rule_description: Краткое грамматическое пояснение аффиксов, корней и правил согласования (1-2 предложения).
+5. target_language: Название изучаемого языка (например, "узбекский", "английский", "татарский").
 
 ОТВЕТ ВЫДАВАЙ СТРОГО В ВИДЕ ЧИСТОГО JSON БЕЗ MARKDOWN:
 {
   "deck_name": "Короткое название темы (до 40 символов)",
   "description": "Краткое описание того, чему научит эта колода",
+  "target_language": "${detectedLanguage}",
   "cards": [
     {
       "front": "Сколько стоит этот арбуз?",
@@ -171,7 +185,7 @@ export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckRe
       return fallbackGenerateDeck(topic);
     }
 
-    const parsed = cleanAndParseDeckJSON(content);
+    const parsed = cleanAndParseDeckJSON(content, topic);
     return parsed || fallbackGenerateDeck(topic);
   } catch (err) {
     console.error("Error generating deck with AI:", err);

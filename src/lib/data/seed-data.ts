@@ -7,6 +7,7 @@ export interface SeedCard {
 export interface SeedDeck {
   title: string;
   description: string;
+  target_language: string;
   cards: SeedCard[];
 }
 
@@ -14,6 +15,7 @@ export const SEED_DECKS: SeedDeck[] = [
   {
     title: "Узбекский: Настоящее время (Hozirgi zamon)",
     description: "Базовые аффиксы лица и числа глаголов: -yapman, -yapsan, -yapti...",
+    target_language: "узбекский",
     cards: [
       {
         front: "Я иду (глагол: bor-)",
@@ -45,6 +47,7 @@ export const SEED_DECKS: SeedDeck[] = [
   {
     title: "Татарский: Притяжательные окончания",
     description: "Аффиксы принадлежности: -ым/-ем, -ың/-ең, -ы/-е...",
+    target_language: "татарский",
     cards: [
       {
         front: "Моя книга (существительное: китап)",
