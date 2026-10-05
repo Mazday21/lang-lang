@@ -13,6 +13,8 @@ create table if not exists public.users (
   first_name text,
   username text,
   plan text not null default 'free',                 -- 'free' | 'pro'
+  native_language text default null,                 -- 'ru' | 'uz'
+  target_language text default null,                 -- 'en' | 'uz' | 'ru'
   ai_requests_today integer not null default 0,      -- Daily usage counter
   last_request_date text not null default to_char(now(), 'YYYY-MM-DD'), -- Reset date
   created_at timestamptz not null default now(),
@@ -21,6 +23,8 @@ create table if not exists public.users (
 
 -- Idempotent column additions for existing installations
 alter table public.users add column if not exists plan text not null default 'free';
+alter table public.users add column if not exists native_language text default null;
+alter table public.users add column if not exists target_language text default null;
 alter table public.users add column if not exists ai_requests_today integer not null default 0;
 alter table public.users add column if not exists last_request_date text not null default to_char(now(), 'YYYY-MM-DD');
 
@@ -33,12 +37,18 @@ create table if not exists public.decks (
   user_id uuid not null references public.users(id) on delete cascade,
   title text not null,
   description text,
+  native_language text default 'ru',
+  target_language text default 'uz',
+  language_pair text default 'ru-uz',
   is_dynamic boolean not null default true,          -- AI dynamic context generation enabled
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.decks add column if not exists is_dynamic boolean not null default true;
+alter table public.decks add column if not exists native_language text default 'ru';
+alter table public.decks add column if not exists target_language text default 'uz';
+alter table public.decks add column if not exists language_pair text default 'ru-uz';
 
 create index if not exists idx_decks_user_id on public.decks(user_id);
 

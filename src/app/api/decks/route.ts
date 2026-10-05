@@ -9,7 +9,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const decks = await getUserDecks(userId);
+    const { searchParams } = new URL(req.url);
+    const pair = searchParams.get("pair") || undefined;
+
+    const decks = await getUserDecks(userId, pair);
     return NextResponse.json({ success: true, decks });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to load decks";

@@ -12,21 +12,17 @@ interface CreateDeckModalProps {
   onClose: () => void;
   token?: string | null;
   onLimitExceeded?: () => void;
+  nativeLang?: string;
+  targetLang?: string;
 }
-
-const TOPIC_SUGGESTIONS = [
-  "Поход на базар Чорсу",
-  "Заказ плова и чая в чайхане",
-  "Поездка на такси в Ташкенте",
-  "Глаголы движения (bor-, kel-)",
-  "Знакомство и вежливые фразы",
-];
 
 export function CreateDeckModal({
   isOpen,
   onClose,
   token,
   onLimitExceeded,
+  nativeLang = "ru",
+  targetLang = "uz",
 }: CreateDeckModalProps) {
   const router = useRouter();
   const [topic, setTopic] = useState("");
@@ -34,6 +30,36 @@ export function CreateDeckModal({
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const getSuggestions = () => {
+    if (targetLang === "en") {
+      return [
+        "Airport & Flight check-in",
+        "Ordering food at a cafe",
+        "Job interview basics",
+        "City travel & Asking directions",
+        "Shopping & Asking prices",
+      ];
+    }
+    if (targetLang === "ru") {
+      return [
+        "Kundalik salomlashish va odob",
+        "Supermarketda xarid qilish",
+        "Metroda yo'l so'rash",
+        "Taksida manzilga borish",
+        "Do'stlar bilan uchrashuv",
+      ];
+    }
+    return [
+      "Поход на базар Чорсу",
+      "Заказ плова и чая в чайхане",
+      "Поездка на такси в Ташкенте",
+      "Глаголы движения (bor-, kel-)",
+      "Знакомство и вежливые фразы",
+    ];
+  };
+
+  const suggestions = getSuggestions();
 
   const handleGenerate = async (selectedTopic?: string) => {
     const finalTopic = (selectedTopic || topic).trim();
@@ -49,7 +75,11 @@ export function CreateDeckModal({
       const res = await fetch("/api/decks/generate", {
         method: "POST",
         headers,
-        body: JSON.stringify({ topic: finalTopic }),
+        body: JSON.stringify({
+          topic: finalTopic,
+          native_language: nativeLang,
+          target_language: targetLang,
+        }),
       });
 
       const data = await res.json();
@@ -103,10 +133,10 @@ export function CreateDeckModal({
           {/* Quick topic tags */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-medium text-[#8A8493] uppercase tracking-wider">
-              Популярные темы:
+              Рекомендуемые темы:
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {TOPIC_SUGGESTIONS.map((item) => (
+              {suggestions.map((item) => (
                 <button
                   key={item}
                   type="button"

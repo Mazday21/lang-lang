@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const topic = (body.topic || "").trim();
+    const nativeLang = body.native_language || "ru";
+    const targetLang = body.target_language || undefined;
 
     if (!topic) {
       return NextResponse.json(
@@ -36,7 +38,11 @@ export async function POST(req: NextRequest) {
     }
 
     const deckResult = await generateDeckWithAI(topic);
-    const createdDeck = await createDeckWithCards(userId, deckResult);
+    if (targetLang) {
+      deckResult.target_language = targetLang;
+    }
+
+    const createdDeck = await createDeckWithCards(userId, deckResult, nativeLang);
 
     return NextResponse.json({
       success: true,

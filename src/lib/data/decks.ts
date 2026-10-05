@@ -1,6 +1,6 @@
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import { calculateSM2, SM2Grade } from "@/lib/sm2";
-import { SEED_DECKS } from "@/lib/data/seed-data";
+import { STARTER_DECKS, SEED_DECKS } from "@/lib/data/seed-data";
 import { GeneratedDeckResult } from "@/lib/ai/deck-generator";
 import { detectLanguageFromText } from "@/lib/utils/language";
 
@@ -8,7 +8,9 @@ export interface DeckItem {
   id: string;
   title: string;
   description: string | null;
+  native_language?: string;
   target_language: string;
+  language_pair?: string;
   is_dynamic: boolean;
   total_cards: number;
   due_cards: number;
@@ -29,59 +31,43 @@ export interface CardItem {
 // In-memory fallback for local dev mode when Supabase is not configured
 interface MockStore {
   seededUsers: Set<string>;
-  decks: Map<string, { id: string; user_id: string; title: string; description: string; target_language: string; is_dynamic: boolean }>;
-  cards: Map<string, {
-    id: string;
-    user_id: string;
-    deck_id: string;
-    front: string;
-    back: string;
-    rule_description: string;
-    interval: number;
-    repetitions: number;
-    ease_factor: number;
-    next_review_at: string;
-  }>;
+  userLanguages: Map<string, { native: string; target: string }>;
+  decks: Map<
+    string,
+    {
+      id: string;
+      user_id: string;
+      title: string;
+      description: string;
+      native_language: string;
+      target_language: string;
+      language_pair: string;
+      is_dynamic: boolean;
+    }
+  >;
+  cards: Map<
+    string,
+    {
+      id: string;
+      user_id: string;
+      deck_id: string;
+      front: string;
+      back: string;
+      rule_description: string;
+      interval: number;
+      repetitions: number;
+      ease_factor: number;
+      next_review_at: string;
+    }
+  >;
 }
 
 const mockStore: MockStore = {
   seededUsers: new Set(),
+  userLanguages: new Map(),
   decks: new Map(),
   cards: new Map(),
 };
-
-function seedMockStore(userId: string) {
-  mockStore.seededUsers.add(userId);
-  let deckIdx = 1;
-  for (const seedDeck of SEED_DECKS) {
-    const deckId = `deck-${deckIdx++}`;
-    mockStore.decks.set(deckId, {
-      id: deckId,
-      user_id: userId,
-      title: seedDeck.title,
-      description: seedDeck.description,
-      target_language: seedDeck.target_language || "узбекский",
-      is_dynamic: true,
-    });
-
-    let cardIdx = 1;
-    for (const seedCard of seedDeck.cards) {
-      const cardId = `card-${deckId}-${cardIdx++}`;
-      mockStore.cards.set(cardId, {
-        id: cardId,
-        user_id: userId,
-        deck_id: deckId,
-        front: seedCard.front,
-        back: seedCard.back,
-        rule_description: seedCard.rule_description,
-        interval: 0,
-        repetitions: 0,
-        ease_factor: 2.5,
-        next_review_at: new Date(Date.now() - 60000).toISOString(),
-      });
-    }
-  }
-}
 
 function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -91,77 +77,188 @@ function isSupabaseConfigured(): boolean {
 }
 
 /**
- * Ensures user has starter decks on first visit.
+ * Seeds starter decks for a specific language pair (e.g. ru-uz, ru-en, uz-ru, uz-en)
  */
-export async function ensureUserSeeded(userId: string): Promise<void> {
+export async function seedStarterDecksForPair(
+  userId: string,
+  nativeLang: string,
+  targetLang: string
+): Promise<void> {
+  const pairKey = `${nativeLang}-${targetLang}`.toLowerCase();
+  const decksToSeed = STARTER_DECKS[pairKey] || STARTER_DECKS["ru-uz"];
+
   if (!isSupabaseConfigured()) {
-    if (!mockStore.seededUsers.has(userId)) {
-      seedMockStore(userId);
+    mockStore.seededUsers.add(userId);
+    for (const seedDeck of decksToSeed) {
+      const deckId = `deck-${pairKey}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      mockStore.decks.set(deckId, {
+        id: deckId,
+        user_id: userId,
+        title: seedDeck.title,
+        description: seedDeck.description,
+        native_language: nativeLang,
+        target_language: targetLang,
+        language_pair: pairKey,
+        is_dynamic: true,
+      });
+
+      let cardIdx = 1;
+      for (const seedCard of seedDeck.cards) {
+        const cardId = `card-${deckId}-${cardIdx++}`;
+        mockStore.cards.set(cardId, {
+          id: cardId,
+          user_id: userId,
+          deck_id: deckId,
+          front: seedCard.front,
+          back: seedCard.back,
+          rule_description: seedCard.rule_description,
+          interval: 0,
+          repetitions: 0,
+          ease_factor: 2.5,
+          next_review_at: new Date(Date.now() - 60000).toISOString(),
+        });
+      }
     }
     return;
   }
 
   const supabase = getSupabaseAdminClient();
-
-  const { count, error } = await supabase
-    .from("decks")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  if (error) {
-    console.error("Error checking user decks in Supabase:", error);
-    return;
-  }
-
-  if ((count ?? 0) === 0) {
-    for (const seedDeck of SEED_DECKS) {
-      const { data: deck, error: deckErr } = await supabase
-        .from("decks")
-        .insert({
-          user_id: userId,
-          title: seedDeck.title,
-          description: seedDeck.description,
-          target_language: seedDeck.target_language || "узбекский",
-          is_dynamic: true,
-        })
-        .select("id")
-        .single();
-
-      if (deckErr || !deck) {
-        console.error("Failed to seed deck:", deckErr);
-        continue;
-      }
-
-      const cardsToInsert = seedDeck.cards.map((c) => ({
+  for (const seedDeck of decksToSeed) {
+    const { data: deck, error: deckErr } = await supabase
+      .from("decks")
+      .insert({
         user_id: userId,
-        deck_id: deck.id,
-        front: c.front,
-        back: c.back,
-        rule_description: c.rule_description,
-        interval: 0,
-        repetitions: 0,
-        ease_factor: 2.5,
-        next_review_at: new Date().toISOString(),
-      }));
+        title: seedDeck.title,
+        description: seedDeck.description,
+        native_language: nativeLang,
+        target_language: targetLang,
+        language_pair: pairKey,
+        is_dynamic: true,
+      })
+      .select("id")
+      .single();
 
-      const { error: cardsErr } = await supabase.from("cards").insert(cardsToInsert);
-      if (cardsErr) {
-        console.error("Failed to seed cards:", cardsErr);
-      }
+    if (deckErr || !deck) {
+      console.error("Failed to seed starter deck:", deckErr);
+      continue;
+    }
+
+    const cardsToInsert = seedDeck.cards.map((c) => ({
+      user_id: userId,
+      deck_id: deck.id,
+      front: c.front,
+      back: c.back,
+      rule_description: c.rule_description,
+      interval: 0,
+      repetitions: 0,
+      ease_factor: 2.5,
+      next_review_at: new Date().toISOString(),
+    }));
+
+    const { error: cardsErr } = await supabase.from("cards").insert(cardsToInsert);
+    if (cardsErr) {
+      console.error("Failed to seed cards:", cardsErr);
     }
   }
 }
 
 /**
- * Returns all decks for the user with count of due cards (next_review_at <= now).
+ * Updates user languages and ensures starter decks exist for that pair.
  */
-export async function getUserDecks(userId: string): Promise<DeckItem[]> {
-  await ensureUserSeeded(userId);
+export async function updateUserLanguages(
+  userId: string,
+  nativeLang: string,
+  targetLang: string
+): Promise<{ native_language: string; target_language: string }> {
+  const pairKey = `${nativeLang}-${targetLang}`.toLowerCase();
 
+  if (!isSupabaseConfigured()) {
+    mockStore.userLanguages.set(userId, { native: nativeLang, target: targetLang });
+    const existingDecks = Array.from(mockStore.decks.values()).filter(
+      (d) => d.user_id === userId && d.language_pair === pairKey
+    );
+    if (existingDecks.length === 0) {
+      await seedStarterDecksForPair(userId, nativeLang, targetLang);
+    }
+    return { native_language: nativeLang, target_language: targetLang };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  await supabase
+    .from("users")
+    .update({
+      native_language: nativeLang,
+      target_language: targetLang,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+
+  // Check if starter decks for this language pair already exist
+  const { count } = await supabase
+    .from("decks")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("language_pair", pairKey);
+
+  if ((count ?? 0) === 0) {
+    await seedStarterDecksForPair(userId, nativeLang, targetLang);
+  }
+
+  return { native_language: nativeLang, target_language: targetLang };
+}
+
+/**
+ * Gets user language preferences
+ */
+export async function getUserLanguages(
+  userId: string
+): Promise<{ native_language: string | null; target_language: string | null }> {
+  if (!isSupabaseConfigured()) {
+    const mock = mockStore.userLanguages.get(userId);
+    return {
+      native_language: mock?.native || null,
+      target_language: mock?.target || null,
+    };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data: user } = await supabase
+    .from("users")
+    .select("native_language, target_language")
+    .eq("id", userId)
+    .single();
+
+  return {
+    native_language: user?.native_language || null,
+    target_language: user?.target_language || null,
+  };
+}
+
+/**
+ * Fallback ensureSeeded for legacy calls
+ */
+export async function ensureUserSeeded(userId: string): Promise<void> {
+  const langs = await getUserLanguages(userId);
+  const native = langs.native_language || "ru";
+  const target = langs.target_language || "uz";
+  await seedStarterDecksForPair(userId, native, target);
+}
+
+/**
+ * Returns all decks for the user with count of due cards (next_review_at <= now).
+ * If pair is specified, filters for that language pair.
+ */
+export async function getUserDecks(
+  userId: string,
+  pairFilter?: string
+): Promise<DeckItem[]> {
   const nowIso = new Date().toISOString();
 
   if (!isSupabaseConfigured()) {
-    const userDecks = Array.from(mockStore.decks.values()).filter((d) => d.user_id === userId);
+    let userDecks = Array.from(mockStore.decks.values()).filter((d) => d.user_id === userId);
+    if (pairFilter) {
+      userDecks = userDecks.filter((d) => !d.language_pair || d.language_pair === pairFilter);
+    }
     const allCards = Array.from(mockStore.cards.values()).filter((c) => c.user_id === userId);
 
     return userDecks.map((d) => {
@@ -171,7 +268,9 @@ export async function getUserDecks(userId: string): Promise<DeckItem[]> {
         id: d.id,
         title: d.title,
         description: d.description,
+        native_language: d.native_language || "ru",
         target_language: d.target_language || detectLanguageFromText(d.title),
+        language_pair: d.language_pair,
         is_dynamic: d.is_dynamic ?? true,
         total_cards: deckCards.length,
         due_cards: dueCards.length,
@@ -181,11 +280,17 @@ export async function getUserDecks(userId: string): Promise<DeckItem[]> {
 
   const supabase = getSupabaseAdminClient();
 
-  const { data: decks, error: decksErr } = await supabase
+  let query = supabase
     .from("decks")
-    .select("id, title, description, target_language, is_dynamic")
+    .select("id, title, description, native_language, target_language, language_pair, is_dynamic")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
+
+  if (pairFilter) {
+    query = query.eq("language_pair", pairFilter);
+  }
+
+  const { data: decks, error: decksErr } = await query;
 
   if (decksErr || !decks) {
     throw new Error(decksErr?.message || "Failed to fetch decks");
@@ -207,7 +312,9 @@ export async function getUserDecks(userId: string): Promise<DeckItem[]> {
       id: deck.id,
       title: deck.title,
       description: deck.description,
+      native_language: deck.native_language || "ru",
       target_language: deck.target_language || detectLanguageFromText(deck.title),
+      language_pair: deck.language_pair,
       is_dynamic: deck.is_dynamic ?? true,
       total_cards: deckCards.length,
       due_cards: dueCards.length,
@@ -221,9 +328,18 @@ export async function getUserDecks(userId: string): Promise<DeckItem[]> {
 export async function getDeckCards(
   userId: string,
   deckId: string
-): Promise<{ deck: { id: string; title: string; description: string | null; target_language?: string; is_dynamic?: boolean }; cards: CardItem[] }> {
-  await ensureUserSeeded(userId);
-
+): Promise<{
+  deck: {
+    id: string;
+    title: string;
+    description: string | null;
+    native_language?: string;
+    target_language?: string;
+    language_pair?: string;
+    is_dynamic?: boolean;
+  };
+  cards: CardItem[];
+}> {
   const nowIso = new Date().toISOString();
 
   if (!isSupabaseConfigured()) {
@@ -246,7 +362,9 @@ export async function getDeckCards(
         id: deck.id,
         title: deck.title,
         description: deck.description,
+        native_language: deck.native_language,
         target_language: deck.target_language || detectLanguageFromText(deck.title),
+        language_pair: deck.language_pair,
         is_dynamic: deck.is_dynamic ?? true,
       },
       cards: trainingCards,
@@ -257,7 +375,7 @@ export async function getDeckCards(
 
   const { data: deck, error: deckErr } = await supabase
     .from("decks")
-    .select("id, title, description, target_language, is_dynamic")
+    .select("id, title, description, native_language, target_language, language_pair, is_dynamic")
     .eq("id", deckId)
     .eq("user_id", userId)
     .single();
@@ -304,9 +422,11 @@ export async function getDeckCards(
  */
 export async function createDeckWithCards(
   userId: string,
-  deckData: GeneratedDeckResult
+  deckData: GeneratedDeckResult,
+  nativeLang = "ru"
 ): Promise<{ id: string; title: string }> {
   const language = deckData.target_language || detectLanguageFromText(deckData.deck_name);
+  const pairKey = `${nativeLang}-${language}`.toLowerCase();
 
   if (!isSupabaseConfigured()) {
     mockStore.seededUsers.add(userId);
@@ -316,7 +436,9 @@ export async function createDeckWithCards(
       user_id: userId,
       title: deckData.deck_name,
       description: deckData.description,
+      native_language: nativeLang,
       target_language: language,
+      language_pair: pairKey,
       is_dynamic: true,
     });
 
@@ -348,7 +470,9 @@ export async function createDeckWithCards(
       user_id: userId,
       title: deckData.deck_name,
       description: deckData.description,
+      native_language: nativeLang,
       target_language: language,
+      language_pair: pairKey,
       is_dynamic: true,
     })
     .select("id, title")

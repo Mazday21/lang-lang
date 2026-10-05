@@ -18,15 +18,26 @@ import {
   Zap,
   Trash2,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 import { DeckItem } from "@/lib/data/decks";
 import { UserLimitStatus } from "@/lib/limits";
 import { CreateDeckModal } from "@/components/create-deck-modal";
 import { PaywallModal } from "@/components/paywall-modal";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { LanguageSwitcherModal } from "@/components/language-switcher-modal";
 
 export default function HubPage() {
   const router = useRouter();
-  const { user, token, isLoading: isAuthLoading, isTelegram, isDevMock, loginWithDevMock } = useAuth();
+  const {
+    user,
+    token,
+    isLoading: isAuthLoading,
+    isTelegram,
+    isDevMock,
+    loginWithDevMock,
+    setLanguages,
+  } = useAuth();
 
   const [decks, setDecks] = useState<DeckItem[]>([]);
   const [limits, setLimits] = useState<UserLimitStatus | null>(null);
@@ -36,37 +47,57 @@ export default function HubPage() {
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [isLanguageSwitcherOpen, setIsLanguageSwitcherOpen] = useState(false);
 
-  const fetchDecksAndLimits = useCallback(async () => {
-    setIsLoadingDecks(true);
-    setError(null);
-    try {
-      const headers: HeadersInit = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
+  // Active language pair
+  const nativeLang = user?.native_language || "ru";
+  const targetLang = user?.target_language || "uz";
+  const currentPairKey = `${nativeLang}-${targetLang}`;
+
+  const flagMap: Record<string, string> = {
+    ru: "🇷🇺 RU",
+    uz: "🇺🇿 UZ",
+    en: "🇬🇧 EN",
+  };
+  const pairLabel = `${flagMap[nativeLang] || nativeLang.toUpperCase()} ➔ ${flagMap[targetLang] || targetLang.toUpperCase()}`;
+
+  const fetchDecksAndLimits = useCallback(
+    async (overrideNative?: string, overrideTarget?: string) => {
+      setIsLoadingDecks(true);
+      setError(null);
+      try {
+        const headers: HeadersInit = {};
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const nat = overrideNative || user?.native_language || "ru";
+        const tar = overrideTarget || user?.target_language || "uz";
+        const pair = `${nat}-${tar}`.toLowerCase();
+
+        const [decksRes, limitsRes] = await Promise.all([
+          fetch(`/api/decks?pair=${pair}`, { headers }),
+          fetch("/api/user/limits", { headers }),
+        ]);
+
+        const decksData = await decksRes.json();
+        if (decksData.success) {
+          setDecks(decksData.decks || []);
+        }
+
+        const limitsData = await limitsRes.json();
+        if (limitsData.success) {
+          setLimits(limitsData);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Ошибка загрузки";
+        setError(msg);
+      } finally {
+        setIsLoadingDecks(false);
       }
-
-      const [decksRes, limitsRes] = await Promise.all([
-        fetch("/api/decks", { headers }),
-        fetch("/api/user/limits", { headers }),
-      ]);
-
-      const decksData = await decksRes.json();
-      if (decksData.success) {
-        setDecks(decksData.decks || []);
-      }
-
-      const limitsData = await limitsRes.json();
-      if (limitsData.success) {
-        setLimits(limitsData);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ошибка загрузки";
-      setError(msg);
-    } finally {
-      setIsLoadingDecks(false);
-    }
-  }, [token]);
+    },
+    [token, user?.native_language, user?.target_language]
+  );
 
   useEffect(() => {
     if (!isAuthLoading) {
@@ -74,12 +105,21 @@ export default function HubPage() {
     }
   }, [isAuthLoading, fetchDecksAndLimits]);
 
+  const handleCompleteOnboarding = async (native: string, target: string) => {
+    await setLanguages(native, target);
+    await fetchDecksAndLimits(native, target);
+  };
+
+  const handleSwitchLanguagePair = async (newNative: string, newTarget: string) => {
+    await setLanguages(newNative, newTarget);
+    await fetchDecksAndLimits(newNative, newTarget);
+  };
+
   const handleDeleteDeck = async (deckId: string) => {
     try {
       const headers: HeadersInit = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      // Optimistic delete
       setDecks((prev) => prev.filter((d) => d.id !== deckId));
 
       await fetch(`/api/decks/${deckId}`, {
@@ -94,6 +134,13 @@ export default function HubPage() {
 
   const totalDue = decks.reduce((acc, d) => acc + d.due_cards, 0);
 
+  // Check if first-time onboarding should be displayed
+  const needsOnboarding = Boolean(
+    !isAuthLoading &&
+    user &&
+    (!user.native_language || !user.target_language)
+  );
+
   if (isAuthLoading) {
     return (
       <main className="min-h-screen bg-[#FDFBF7] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
@@ -107,14 +154,30 @@ export default function HubPage() {
     );
   }
 
+  // First-time onboarding screen
+  if (needsOnboarding) {
+    return <OnboardingWizard onComplete={handleCompleteOnboarding} />;
+  }
+
   return (
     <main className="min-h-screen bg-[#FDFBF7] text-[#4A4453] px-4 py-6 md:py-10 max-w-lg mx-auto flex flex-col gap-5">
+      {/* Language Switcher Modal */}
+      <LanguageSwitcherModal
+        isOpen={isLanguageSwitcherOpen}
+        onClose={() => setIsLanguageSwitcherOpen(false)}
+        currentNative={nativeLang}
+        currentTarget={targetLang}
+        onSave={handleSwitchLanguagePair}
+      />
+
       {/* Create Deck AI Modal */}
       <CreateDeckModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         token={token}
         onLimitExceeded={() => setIsPaywallOpen(true)}
+        nativeLang={nativeLang}
+        targetLang={targetLang}
       />
 
       {/* Soft Paywall Modal */}
@@ -124,7 +187,7 @@ export default function HubPage() {
         token={token}
       />
 
-      {/* Calm Header */}
+      {/* Calm Header with Language Pair Badge */}
       <header className="flex items-center justify-between pb-2 border-b border-[#E8E2D9]">
         <div>
           <p className="text-xs font-medium text-[#8A8493] tracking-wide uppercase">
@@ -135,19 +198,15 @@ export default function HubPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {isTelegram ? (
-            <Badge variant="default" className="text-[11px]">
-              Telegram
-            </Badge>
-          ) : isDevMock ? (
-            <Badge variant="secondary" className="text-[11px]">
-              Dev Mode
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-[11px]">
-              Браузер
-            </Badge>
-          )}
+          {/* Language Pair Selector Button */}
+          <button
+            onClick={() => setIsLanguageSwitcherOpen(true)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#E8E2D9] hover:border-[#E0BBE4] active:scale-95 text-xs font-semibold text-[#4A4453] transition-all shadow-none"
+            title="Сменить язык обучения"
+          >
+            <span>{pairLabel}</span>
+            <ChevronDown className="h-3 w-3 text-[#8A8493]" />
+          </button>
 
           <Button
             variant="ghost"
@@ -223,9 +282,11 @@ export default function HubPage() {
       {/* Decks Section */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm font-semibold text-[#4A4453]">Колоды для изучения</h2>
+          <h2 className="text-sm font-semibold text-[#4A4453]">
+            Колоды для изучения ({pairLabel})
+          </h2>
           <button
-            onClick={fetchDecksAndLimits}
+            onClick={() => fetchDecksAndLimits()}
             disabled={isLoadingDecks}
             className="text-xs text-[#8A8493] hover:text-[#4A4453] flex items-center gap-1 transition-colors"
           >
@@ -241,7 +302,7 @@ export default function HubPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={fetchDecksAndLimits}
+                onClick={() => fetchDecksAndLimits()}
                 className="mt-2 block w-full text-xs"
               >
                 Повторить попытку
@@ -263,10 +324,10 @@ export default function HubPage() {
             </div>
             <div className="space-y-1.5">
               <h3 className="text-base font-semibold text-[#4A4453]">
-                У вас пока нет колод для тренировки
+                У вас пока нет колод для этой языковой пары
               </h3>
               <p className="text-xs text-[#8A8493] leading-relaxed max-w-xs mx-auto">
-                Давайте создадим первую с помощью ИИ! Назовите любую тему — от похода на базар Чорсу до разговора в такси.
+                Давайте создадим первую с помощью ИИ! Назовите любую тему — от приветствий до покупок.
               </p>
             </div>
             <div className="pt-2">
@@ -277,7 +338,7 @@ export default function HubPage() {
                 className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                <span>Создать первую колоду</span>
+                <span>Создать колоду ({pairLabel})</span>
               </Button>
             </div>
           </Card>
@@ -326,7 +387,6 @@ export default function HubPage() {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {/* Delete deck button */}
                       <button
                         type="button"
                         onClick={(e) => {
