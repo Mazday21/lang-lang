@@ -54,6 +54,8 @@ interface MockStore {
       level?: number;
       is_starter: boolean;
       is_dynamic: boolean;
+      source?: string;
+      content_hash?: string | null;
       created_at?: string;
     }
   >;
@@ -81,7 +83,7 @@ const mockStore: MockStore = {
   cards: new Map(),
 };
 
-function isSupabaseConfigured(): boolean {
+export function isSupabaseConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -565,15 +567,63 @@ export async function getDeckCards(
 }
 
 /**
+ * Options for automatic/controlled deck creation (content pipeline).
+ */
+export interface CreateDeckOptions {
+  is_starter?: boolean;
+  source?: "ai" | "user" | "seed";
+  content_hash?: string | null;
+  level?: number;
+  /** When true, an existing deck with the same content_hash is returned instead of inserting. */
+  skip_if_exists?: boolean;
+}
+
+/**
+ * Finds a deck id by its idempotency content_hash (returns null when absent).
+ */
+export async function findDeckIdByContentHash(contentHash: string): Promise<string | null> {
+  if (!isSupabaseConfigured()) {
+    for (const deck of Array.from(mockStore.decks.values())) {
+      if (deck.content_hash === contentHash) return deck.id;
+    }
+    return null;
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("decks")
+    .select("id")
+    .eq("content_hash", contentHash)
+    .maybeSingle();
+
+  return data?.id || null;
+}
+
+/**
  * Creates a brand new deck with generated cards.
+ * Supports the content pipeline: shared starter templates (is_starter),
+ * personal decks, difficulty level and idempotency via content_hash.
  */
 export async function createDeckWithCards(
   userId: string,
   deckData: GeneratedDeckResult,
-  nativeLang = "ru"
-): Promise<{ id: string; title: string }> {
+  nativeLang = "ru",
+  options: CreateDeckOptions = {}
+): Promise<{ id: string; title: string; created: boolean }> {
   const language = deckData.target_language || detectLanguageFromText(deckData.deck_name);
   const pairKey = `${nativeLang}-${language}`.toLowerCase();
+  const isStarter = options.is_starter ?? false;
+  const source = options.source ?? "user";
+  const contentHash = options.content_hash ?? null;
+  const level = options.level || deckData.level || 1;
+
+  // Idempotency guard: never create duplicates of generated content
+  if (contentHash && options.skip_if_exists) {
+    const existingId = await findDeckIdByContentHash(contentHash);
+    if (existingId) {
+      return { id: existingId, title: deckData.deck_name, created: false };
+    }
+  }
 
   if (!isSupabaseConfigured()) {
     mockStore.seededUsers.add(userId);
@@ -586,9 +636,11 @@ export async function createDeckWithCards(
       native_language: nativeLang,
       target_language: language,
       language_pair: pairKey,
-      level: deckData.level || 1,
-      is_starter: false,
+      level,
+      is_starter: isStarter,
       is_dynamic: true,
+      source,
+      content_hash: contentHash,
       created_at: new Date().toISOString(),
     });
 
@@ -609,7 +661,7 @@ export async function createDeckWithCards(
       });
     }
 
-    return { id: deckId, title: deckData.deck_name };
+    return { id: deckId, title: deckData.deck_name, created: true };
   }
 
   const supabase = getSupabaseAdminClient();
@@ -624,16 +676,33 @@ export async function createDeckWithCards(
     is_dynamic: true,
   };
 
-  // Try insert with level + is_starter first
+  // Try insert with level + is_starter + source + content_hash first
   let { data: newDeck, error: deckErr } = await supabase
     .from("decks")
     .insert({
       ...baseDeckInsert,
-      level: deckData.level || 1,
-      is_starter: false,
+      level,
+      is_starter: isStarter,
+      source,
+      content_hash: contentHash,
     })
     .select("id, title")
     .single();
+
+  if (deckErr || !newDeck) {
+    // Fallback: legacy tables without source/content_hash columns
+    const midInsert = await supabase
+      .from("decks")
+      .insert({
+        ...baseDeckInsert,
+        level,
+        is_starter: isStarter,
+      })
+      .select("id, title")
+      .single();
+    newDeck = midInsert.data;
+    deckErr = midInsert.error;
+  }
 
   if (deckErr || !newDeck) {
     // Fallback for legacy tables without level/is_starter columns
@@ -667,7 +736,88 @@ export async function createDeckWithCards(
     console.error("Failed to insert generated cards:", cardsErr);
   }
 
-  return newDeck;
+  return { id: newDeck.id, title: newDeck.title, created: true };
+}
+
+/**
+ * Returns the user's "weak" cards (ease_factor below threshold) inside the given decks.
+ * Used by the personal top-up pipeline to generate reinforcement material.
+ * Note: shared starter deck cards belong to their creator, so no user_id filter here —
+ * visibility is already scoped by the deck list.
+ */
+export async function getUserWeakCards(
+  deckIds: string[],
+  limit = 8
+): Promise<Array<{ front: string; back: string; rule_description: string | null }>> {
+  if (deckIds.length === 0) return [];
+
+  if (!isSupabaseConfigured()) {
+    return Array.from(mockStore.cards.values())
+      .filter((c) => deckIds.includes(c.deck_id) && c.ease_factor < 2.2)
+      .slice(0, limit)
+      .map((c) => ({ front: c.front, back: c.back, rule_description: c.rule_description }));
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("cards")
+    .select("front, back, rule_description")
+    .in("deck_id", deckIds)
+    .lt("ease_factor", 2.2)
+    .order("ease_factor", { ascending: true })
+    .limit(limit);
+
+  return data || [];
+}
+
+/**
+ * Counts AI-generated decks created by the user since a timestamp (daily budget guard).
+ */
+export async function countUserAiDecksSince(userId: string, sinceIso: string): Promise<number> {
+  if (!isSupabaseConfigured()) {
+    return Array.from(mockStore.decks.values()).filter(
+      (d) =>
+        d.user_id === userId &&
+        d.source === "ai" &&
+        d.created_at &&
+        d.created_at >= sinceIso
+    ).length;
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("decks")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("source", "ai")
+    .gte("created_at", sinceIso);
+
+  return data?.length || 0;
+}
+
+/**
+ * Appends a review event to the review_log (best-effort analytics for the refill pipeline).
+ */
+export async function logCardReview(
+  userId: string,
+  cardId: string,
+  deckId: string | null,
+  grade: SM2Grade
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    const supabase = getSupabaseAdminClient();
+    await supabase.from("review_log").insert({
+      user_id: userId,
+      card_id: cardId,
+      deck_id: deckId,
+      grade,
+    });
+  } catch (err) {
+    // Analytics must never break the review flow
+    console.warn("Failed to log card review:", err);
+  }
 }
 
 /**
@@ -728,6 +878,8 @@ export async function updateCardReview(
 
     mockStore.cards.set(cardId, card);
 
+    await logCardReview(userId, cardId, card.deck_id, grade);
+
     return { card, sm2Result };
   }
 
@@ -768,6 +920,8 @@ export async function updateCardReview(
   if (updateErr || !updatedCard) {
     throw new Error(updateErr?.message || "Failed to update card");
   }
+
+  await logCardReview(userId, cardId, updatedCard.deck_id, grade);
 
   return { card: updatedCard, sm2Result };
 }

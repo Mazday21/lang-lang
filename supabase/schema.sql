@@ -41,6 +41,8 @@ create table if not exists public.decks (
   target_language text default 'uz',
   language_pair text default 'ru-uz',
   level integer not null default 1,                  -- difficulty level (1 = Новичок, 2 = Базовый, 3 = Средний, ...)
+  source text not null default 'user',               -- 'seed' | 'ai' | 'user' — content origin
+  content_hash text,                                 -- idempotency key for auto-generated content
   is_dynamic boolean not null default true,          -- AI dynamic context generation enabled
   is_starter boolean not null default false,         -- system starter deck shared with all users
   created_at timestamptz not null default now(),
@@ -53,8 +55,12 @@ alter table public.decks add column if not exists target_language text default '
 alter table public.decks add column if not exists language_pair text default 'ru-uz';
 alter table public.decks add column if not exists level integer not null default 1;
 alter table public.decks add column if not exists is_starter boolean not null default false;
+alter table public.decks add column if not exists source text not null default 'user';
+alter table public.decks add column if not exists content_hash text;
 
 create index if not exists idx_decks_user_id on public.decks(user_id);
+create unique index if not exists idx_decks_content_hash on public.decks(content_hash) where content_hash is not null;
+create index if not exists idx_decks_pair_level on public.decks(language_pair, level);
 
 -- 4. CARDS TABLE (SM-2 Interval Repetition)
 create table if not exists public.cards (
@@ -74,6 +80,21 @@ create table if not exists public.cards (
 
 create index if not exists idx_cards_user_id on public.cards(user_id);
 create index if not exists idx_cards_next_review on public.cards(user_id, next_review_at);
+
+-- 4b. REVIEW LOG (analytics for the AI refill pipeline)
+create table if not exists public.review_log (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  card_id uuid references public.cards(id) on delete cascade,
+  deck_id uuid references public.decks(id) on delete cascade,
+  grade integer not null,                            -- SM-2 grade (1..4)
+  reviewed_at timestamptz not null default now()
+);
+
+alter table public.review_log add column if not exists grade integer not null default 0;
+
+create index if not exists idx_review_log_user on public.review_log(user_id, reviewed_at);
+create index if not exists idx_review_log_card on public.review_log(card_id);
 
 -- 5. ROW LEVEL SECURITY (RLS) POLICIES
 -- Strict isolation: No user can access or mutate data belonging to other users.

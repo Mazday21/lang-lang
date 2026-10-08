@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,6 +131,41 @@ export default function HubPage() {
       fetchDecksAndLimits();
     }
   }, [isAuthLoading, fetchDecksAndLimits]);
+
+  // Background content pipeline: fills shared curriculum + personal top-up decks.
+  // Runs at most once per language pair per session; never blocks the UI.
+  const populatedPairRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isAuthLoading || !user || !token) return;
+
+    const nat = user.native_language || "ru";
+    const tar = user.target_language || "uz";
+    const pairKey = `${nat}-${tar}`;
+    if (!nat || !tar || populatedPairRef.current === pairKey) return;
+    populatedPairRef.current = pairKey;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/decks/auto-populate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ native: nat, target: tar }),
+        });
+        const data = await res.json().catch(() => null);
+        const createdAny =
+          (data?.shared?.created ?? 0) > 0 || data?.personal?.created === true;
+        if (res.ok && data?.success && createdAny) {
+          // Silently refresh the list so new decks appear
+          fetchDecksAndLimits(nat, tar);
+        }
+      } catch {
+        // Background enrichment must never break the hub
+      }
+    })();
+  }, [isAuthLoading, user, token, fetchDecksAndLimits]);
 
   const handleCompleteOnboarding = async (native: string, target: string) => {
     await setLanguages(native, target);
