@@ -64,6 +64,29 @@ export default function HubPage() {
 
   const pairLabel = `${nativeLang.toUpperCase()} ➔ ${targetLang.toUpperCase()}`;
 
+  // Deck difficulty levels
+  const LEVEL_NAMES: Record<number, string> = {
+    1: "Новичок",
+    2: "Базовый",
+    3: "Средний",
+    4: "Продвинутый",
+    5: "Эксперт",
+  };
+  const levelName = (level: number) => LEVEL_NAMES[level] || "Эксперт";
+
+  // Group decks by difficulty level (level 1 first)
+  const decksByLevel = [...decks]
+    .sort((a, b) => (a.level || 1) - (b.level || 1))
+    .reduce<Record<number, DeckItem[]>>((acc, deck) => {
+      const lvl = deck.level || 1;
+      if (!acc[lvl]) acc[lvl] = [];
+      acc[lvl].push(deck);
+      return acc;
+    }, {});
+  const levelGroups = Object.keys(decksByLevel)
+    .map(Number)
+    .sort((a, b) => a - b);
+
   const fetchDecksAndLimits = useCallback(
     async (overrideNative?: string, overrideTarget?: string) => {
       setIsLoadingDecks(true);
@@ -340,10 +363,21 @@ export default function HubPage() {
             </div>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {decks.map((deck) => {
-              const hasDue = deck.due_cards > 0;
-              return (
+          <div className="space-y-6">
+            {levelGroups.map((level) => (
+              <div key={level} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-[#8A8493] uppercase tracking-wider whitespace-nowrap">
+                    Уровень {level} · {levelName(level)}
+                  </span>
+                  <div className="flex-1 h-px bg-[#E8E2D9]" />
+                  <span className="text-[11px] text-[#8A8493] whitespace-nowrap">
+                    {decksByLevel[level].length} колод
+                  </span>
+                </div>
+                {decksByLevel[level].map((deck) => {
+                  const hasDue = deck.due_cards > 0;
+                  return (
                 <Card
                   key={deck.id}
                   onClick={() => router.push(`/train/${deck.id}`)}
@@ -355,6 +389,12 @@ export default function HubPage() {
                         <h3 className="text-sm font-semibold text-[#4A4453] truncate">
                           {deck.title}
                         </h3>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] py-0 px-1.5 font-normal text-[#482C4E] border-[#E0BBE4] bg-[#FAF6FB] whitespace-nowrap"
+                        >
+                          Уровень {deck.level || 1} · {levelName(deck.level || 1)}
+                        </Badge>
                       </div>
                       {deck.description && (
                         <p className="text-xs text-[#8A8493] line-clamp-2 leading-relaxed">
@@ -397,8 +437,10 @@ export default function HubPage() {
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })}
+                  );
+                })}
+              </div>
+            ))}
           </div>
         )}
       </section>

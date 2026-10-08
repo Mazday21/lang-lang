@@ -40,7 +40,9 @@ create table if not exists public.decks (
   native_language text default 'ru',
   target_language text default 'uz',
   language_pair text default 'ru-uz',
+  level integer not null default 1,                  -- difficulty level (1 = Новичок, 2 = Базовый, 3 = Средний, ...)
   is_dynamic boolean not null default true,          -- AI dynamic context generation enabled
+  is_starter boolean not null default false,         -- system starter deck shared with all users
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -49,6 +51,8 @@ alter table public.decks add column if not exists is_dynamic boolean not null de
 alter table public.decks add column if not exists native_language text default 'ru';
 alter table public.decks add column if not exists target_language text default 'uz';
 alter table public.decks add column if not exists language_pair text default 'ru-uz';
+alter table public.decks add column if not exists level integer not null default 1;
+alter table public.decks add column if not exists is_starter boolean not null default false;
 
 create index if not exists idx_decks_user_id on public.decks(user_id);
 

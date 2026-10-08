@@ -18,6 +18,7 @@ export interface DeckItem {
   native_language?: string;
   target_language: string;
   language_pair?: string;
+  level: number;
   is_starter?: boolean;
   is_dynamic: boolean;
   total_cards: number;
@@ -50,8 +51,10 @@ interface MockStore {
       native_language: string;
       target_language: string;
       language_pair: string;
+      level?: number;
       is_starter: boolean;
       is_dynamic: boolean;
+      created_at?: string;
     }
   >;
   cards: Map<
@@ -108,8 +111,10 @@ export async function seedStarterDecksForPair(
         native_language: nativeLang,
         target_language: targetLang,
         language_pair: pairKey,
+        level: seedDeck.level || 1,
         is_starter: true,
         is_dynamic: true,
+        created_at: new Date().toISOString(),
       });
 
       let cardIdx = 1;
@@ -134,61 +139,67 @@ export async function seedStarterDecksForPair(
 
   const supabase = getSupabaseAdminClient();
   for (const seedDeck of decksToSeed) {
+    const baseDeckInsert = {
+      user_id: userId,
+      title: seedDeck.title,
+      description: seedDeck.description,
+      native_language: nativeLang,
+      target_language: targetLang,
+      language_pair: pairKey,
+    };
+
+    let deckId: string | null = null;
+
+    // Try full insert first (with level + is_starter)
     const { data: deck, error: deckErr } = await supabase
       .from("decks")
       .insert({
-        user_id: userId,
-        title: seedDeck.title,
-        description: seedDeck.description,
-        native_language: nativeLang,
-        target_language: targetLang,
-        language_pair: pairKey,
+        ...baseDeckInsert,
+        level: seedDeck.level || 1,
         is_starter: true,
         is_dynamic: true,
       })
       .select("id")
       .single();
 
-    if (deckErr || !deck) {
-      // If is_starter column fails, retry without it
+    if (!deckErr && deck) {
+      deckId = deck.id;
+    } else {
+      // If is_starter column is missing, retry without it
       const fallbackInsert = await supabase
         .from("decks")
         .insert({
-          user_id: userId,
-          title: seedDeck.title,
-          description: seedDeck.description,
-          native_language: nativeLang,
-          target_language: targetLang,
-          language_pair: pairKey,
+          ...baseDeckInsert,
+          level: seedDeck.level || 1,
           is_dynamic: true,
         })
         .select("id")
         .single();
 
-      if (fallbackInsert.error || !fallbackInsert.data) {
-        console.error("Failed to seed starter deck:", fallbackInsert.error);
-        continue;
+      if (!fallbackInsert.error && fallbackInsert.data) {
+        deckId = fallbackInsert.data.id;
+      } else {
+        // If level column is missing too, retry with legacy schema
+        const legacyInsert = await supabase
+          .from("decks")
+          .insert({
+            ...baseDeckInsert,
+            is_dynamic: true,
+          })
+          .select("id")
+          .single();
+
+        if (legacyInsert.error || !legacyInsert.data) {
+          console.error("Failed to seed starter deck:", legacyInsert.error);
+          continue;
+        }
+        deckId = legacyInsert.data.id;
       }
-
-      const cardsToInsert = seedDeck.cards.map((c) => ({
-        user_id: userId,
-        deck_id: fallbackInsert.data.id,
-        front: c.front,
-        back: c.back,
-        rule_description: c.rule_description,
-        interval: 0,
-        repetitions: 0,
-        ease_factor: 2.5,
-        next_review_at: new Date().toISOString(),
-      }));
-
-      await supabase.from("cards").insert(cardsToInsert);
-      continue;
     }
 
     const cardsToInsert = seedDeck.cards.map((c) => ({
       user_id: userId,
-      deck_id: deck.id,
+      deck_id: deckId,
       front: c.front,
       back: c.back,
       rule_description: c.rule_description,
@@ -309,6 +320,13 @@ export async function getUserDecks(
       (c) => c.user_id === userId || userDecks.some((d) => d.id === c.deck_id)
     );
 
+    // ORDER BY level ASC, created_at ASC
+    userDecks.sort((a, b) => {
+      const levelDiff = (a.level || 1) - (b.level || 1);
+      if (levelDiff !== 0) return levelDiff;
+      return (a.created_at || "").localeCompare(b.created_at || "");
+    });
+
     return userDecks.map((d) => {
       const deckCards = allCards.filter((c) => c.deck_id === d.id);
       const dueCards = deckCards.filter((c) => c.next_review_at <= nowIso);
@@ -319,6 +337,7 @@ export async function getUserDecks(
         native_language: d.native_language || "ru",
         target_language: d.target_language || detectLanguageFromText(d.title),
         language_pair: d.language_pair,
+        level: d.level || 1,
         is_starter: Boolean(d.is_starter),
         is_dynamic: d.is_dynamic ?? true,
         total_cards: deckCards.length,
@@ -336,8 +355,9 @@ export async function getUserDecks(
   try {
     const res = await supabase
       .from("decks")
-      .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id")
+      .select("id, title, description, native_language, target_language, language_pair, level, is_dynamic, is_starter, user_id, created_at")
       .or(`user_id.eq.${userId},is_starter.eq.true`)
+      .order("level", { ascending: true })
       .order("created_at", { ascending: true });
     decks = res.data;
     decksErr = res.error;
@@ -345,11 +365,11 @@ export async function getUserDecks(
     decksErr = err;
   }
 
-  // Fallback if is_starter column is not present in existing table
+  // Fallback if is_starter/level columns are not present in existing table
   if (decksErr || !decks) {
     const resFallback = await supabase
       .from("decks")
-      .select("id, title, description, native_language, target_language, language_pair, is_dynamic, user_id")
+      .select("id, title, description, native_language, target_language, language_pair, is_dynamic, user_id, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
     decks = resFallback.data;
@@ -373,13 +393,21 @@ export async function getUserDecks(
     const target = tokens[1] || "uz";
     try {
       await seedStarterDecksForPair(userId, native, target);
-      const reseeded = await supabase
+      let reseeded: any = await supabase
         .from("decks")
-        .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id")
+        .select("id, title, description, native_language, target_language, language_pair, level, is_dynamic, is_starter, user_id, created_at")
         .or(`user_id.eq.${userId},is_starter.eq.true`)
+        .order("level", { ascending: true })
         .order("created_at", { ascending: true });
+      if (reseeded.error || !reseeded.data) {
+        reseeded = await supabase
+          .from("decks")
+          .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id, created_at")
+          .or(`user_id.eq.${userId},is_starter.eq.true`)
+          .order("created_at", { ascending: true });
+      }
       if (reseeded.data && reseeded.data.length > 0) {
-        matchedDecks = reseeded.data.filter((deck) => isDeckMatchingPair(deck, pairFilter));
+        matchedDecks = reseeded.data.filter((deck: any) => isDeckMatchingPair(deck, pairFilter));
       }
     } catch (seedErr) {
       console.warn("Could not re-seed on empty query:", seedErr);
@@ -397,6 +425,13 @@ export async function getUserDecks(
     cards = cardsRes;
   }
 
+  // ORDER BY level ASC, created_at ASC (safety net for legacy fallback queries)
+  matchedDecks = [...matchedDecks].sort((a, b) => {
+    const levelDiff = (a.level || 1) - (b.level || 1);
+    if (levelDiff !== 0) return levelDiff;
+    return (a.created_at || "").localeCompare(b.created_at || "");
+  });
+
   return matchedDecks.map((deck) => {
     const deckCards = (cards || []).filter((c) => c.deck_id === deck.id);
     const dueCards = deckCards.filter((c) => c.next_review_at <= nowIso);
@@ -407,6 +442,7 @@ export async function getUserDecks(
       native_language: deck.native_language || "ru",
       target_language: deck.target_language || detectLanguageFromText(deck.title),
       language_pair: deck.language_pair,
+      level: deck.level || 1,
       is_starter: Boolean(deck.is_starter),
       is_dynamic: deck.is_dynamic ?? true,
       total_cards: deckCards.length,
@@ -430,6 +466,7 @@ export async function getDeckCards(
     native_language?: string;
     target_language?: string;
     language_pair?: string;
+    level?: number;
     is_starter?: boolean;
     is_dynamic?: boolean;
   };
@@ -461,6 +498,7 @@ export async function getDeckCards(
         native_language: deck.native_language,
         target_language: deck.target_language || detectLanguageFromText(deck.title),
         language_pair: deck.language_pair,
+        level: deck.level || 1,
         is_starter: deck.is_starter,
         is_dynamic: deck.is_dynamic ?? true,
       },
@@ -472,7 +510,7 @@ export async function getDeckCards(
 
   let deckRes = await supabase
     .from("decks")
-    .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id")
+    .select("id, title, description, native_language, target_language, language_pair, level, is_dynamic, is_starter, user_id")
     .eq("id", deckId)
     .or(`user_id.eq.${userId},is_starter.eq.true`)
     .maybeSingle();
@@ -519,6 +557,7 @@ export async function getDeckCards(
   return {
     deck: {
       ...deck,
+      level: deck.level ?? 1,
       target_language: deck.target_language || detectLanguageFromText(deck.title),
     },
     cards,
@@ -547,8 +586,10 @@ export async function createDeckWithCards(
       native_language: nativeLang,
       target_language: language,
       language_pair: pairKey,
+      level: deckData.level || 1,
       is_starter: false,
       is_dynamic: true,
+      created_at: new Date().toISOString(),
     });
 
     let cardIdx = 1;
@@ -573,20 +614,37 @@ export async function createDeckWithCards(
 
   const supabase = getSupabaseAdminClient();
 
-  const { data: newDeck, error: deckErr } = await supabase
+  const baseDeckInsert = {
+    user_id: userId,
+    title: deckData.deck_name,
+    description: deckData.description,
+    native_language: nativeLang,
+    target_language: language,
+    language_pair: pairKey,
+    is_dynamic: true,
+  };
+
+  // Try insert with level + is_starter first
+  let { data: newDeck, error: deckErr } = await supabase
     .from("decks")
     .insert({
-      user_id: userId,
-      title: deckData.deck_name,
-      description: deckData.description,
-      native_language: nativeLang,
-      target_language: language,
-      language_pair: pairKey,
-      is_dynamic: true,
+      ...baseDeckInsert,
+      level: deckData.level || 1,
       is_starter: false,
     })
     .select("id, title")
     .single();
+
+  if (deckErr || !newDeck) {
+    // Fallback for legacy tables without level/is_starter columns
+    const fallbackInsert = await supabase
+      .from("decks")
+      .insert(baseDeckInsert)
+      .select("id, title")
+      .single();
+    newDeck = fallbackInsert.data;
+    deckErr = fallbackInsert.error;
+  }
 
   if (deckErr || !newDeck) {
     throw new Error(deckErr?.message || "Failed to create deck");

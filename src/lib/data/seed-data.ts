@@ -10,6 +10,7 @@ export interface SeedDeck {
   native_language: string;
   target_language: string;
   language_pair: string;
+  level: number;
   cards: SeedCard[];
 }
 
@@ -22,6 +23,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "ru",
       target_language: "uz",
       language_pair: "ru-uz",
+      level: 1,
       cards: [
         {
           front: "Привет / Здравствуйте",
@@ -56,6 +58,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "ru",
       target_language: "uz",
       language_pair: "ru-uz",
+      level: 1,
       cards: [
         {
           front: "Один, два, три, четыре, пять",
@@ -90,6 +93,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "ru",
       target_language: "uz",
       language_pair: "ru-uz",
+      level: 2,
       cards: [
         {
           front: "Где находится метро?",
@@ -128,6 +132,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "ru",
       target_language: "en",
       language_pair: "ru-en",
+      level: 1,
       cards: [
         {
           front: "Привет, как поживаешь?",
@@ -162,6 +167,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "ru",
       target_language: "en",
       language_pair: "ru-en",
+      level: 1,
       cards: [
         {
           front: "Сколько это стоит?",
@@ -196,6 +202,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "ru",
       target_language: "en",
       language_pair: "ru-en",
+      level: 2,
       cards: [
         {
           front: "Где находится ближайшая станция?",
@@ -234,6 +241,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "uz",
       target_language: "ru",
       language_pair: "uz-ru",
+      level: 1,
       cards: [
         {
           front: "Salom, qalaysiz?",
@@ -268,6 +276,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "uz",
       target_language: "ru",
       language_pair: "uz-ru",
+      level: 1,
       cards: [
         {
           front: "Bu qancha turadi?",
@@ -302,6 +311,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "uz",
       target_language: "ru",
       language_pair: "uz-ru",
+      level: 2,
       cards: [
         {
           front: "Metro qayerda joylashgan?",
@@ -340,6 +350,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "uz",
       target_language: "en",
       language_pair: "uz-en",
+      level: 1,
       cards: [
         {
           front: "Salom, ishlaringiz qalay?",
@@ -374,6 +385,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "uz",
       target_language: "en",
       language_pair: "uz-en",
+      level: 1,
       cards: [
         {
           front: "Bu qancha turadi?",
@@ -408,6 +420,7 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
       native_language: "uz",
       target_language: "en",
       language_pair: "uz-en",
+      level: 2,
       cards: [
         {
           front: "Bu manzilga qanday borsam bo'ladi?",

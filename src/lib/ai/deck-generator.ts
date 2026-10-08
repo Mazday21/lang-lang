@@ -11,6 +11,7 @@ export interface GeneratedDeckResult {
   deck_name: string;
   description: string;
   target_language?: string;
+  level?: number;
   cards: GeneratedCard[];
 }
 
