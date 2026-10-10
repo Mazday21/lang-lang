@@ -17,7 +17,7 @@ import {
   ExternalLink,
   Loader2,
 } from "lucide-react";
-import { UserLimitStatus, DAILY_FREE_LIMIT } from "@/lib/limits";
+import { UserLimitStatus, FREE_TRIAL_LIMIT } from "@/lib/limits";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -146,9 +146,9 @@ export default function SettingsPage() {
   };
 
   const isPro = limits?.plan === "pro";
-  const usedCount = limits?.ai_requests_today || 0;
-  const totalLimit = isPro ? "Безлимитно" : DAILY_FREE_LIMIT;
-  const progressPercent = isPro ? 100 : Math.min(100, Math.round((usedCount / DAILY_FREE_LIMIT) * 100));
+  const usedCount = limits?.ai_requests_used || 0;
+  const totalLimit = isPro ? "Безлимитно" : FREE_TRIAL_LIMIT;
+  const progressPercent = isPro ? 100 : Math.min(100, Math.round((usedCount / FREE_TRIAL_LIMIT) * 100));
 
   return (
     <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-6 max-w-lg mx-auto flex flex-col gap-5">
@@ -200,7 +200,7 @@ export default function SettingsPage() {
           <CardDescription className="text-xs">
             {isPro
               ? "У вас действует безлимитный доступ к нейросети"
-              : "Дневной лимит сбрасывается в полночь"}
+              : "Бесплатный пробный лимит: 5 AI-проверок на аккаунт"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
@@ -217,8 +217,8 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="flex justify-between text-[11px] text-[#7B6FA6]">
-                <span>Сегодня использовано: {usedCount}</span>
-                <span>{isPro ? "∞" : `Осталось: ${limits?.remaining ?? 20}`}</span>
+                <span>Использовано: {usedCount}</span>
+                <span>{isPro ? "∞" : `Осталось: ${limits?.remaining ?? FREE_TRIAL_LIMIT}`}</span>
               </div>
             </div>
           )}

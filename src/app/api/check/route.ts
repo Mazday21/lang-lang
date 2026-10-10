@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           limit_exceeded: true,
-          error: limitCheck.error || "Дневной лимит AI-проверок исчерпан",
+          error: limitCheck.error || "Лимит AI-проверок исчерпан",
           limits: limitCheck,
         },
         { status: 403 }

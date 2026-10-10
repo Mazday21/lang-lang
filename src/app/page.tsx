@@ -469,16 +469,29 @@ export default function HubPage() {
         </CardContent>
       </Card>
 
-      {/* AI Deck Builder Action Button */}
-      <Button
-        variant="secondary"
-        size="lg"
-        onClick={() => setIsCreateModalOpen(true)}
-        className="w-full text-sm font-semibold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0]"
-      >
-        <Sparkles className="h-4 w-4" />
-        <span>Сгенерировать колоду с помощью AI</span>
-      </Button>
+      {/* AI Deck Builder Action Button (Pro) / CTA for free accounts */}
+      {limits?.plan === "pro" ? (
+        <Button
+          variant="secondary"
+          size="lg"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="w-full text-sm font-semibold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0]"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>Сгенерировать колоду с помощью AI</span>
+        </Button>
+      ) : (
+        <Button
+          variant="secondary"
+          size="lg"
+          onClick={() => setIsPaywallOpen(true)}
+          className="w-full text-sm font-bold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-gradient-to-r from-[#B7A0F6] to-[#9FE2CE] text-[#2A2352] hover:opacity-90"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>Попробовать ИИ-суперсилы</span>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      )}
 
       {/* Decks Section */}
       <section className="space-y-3">
@@ -532,15 +545,28 @@ export default function HubPage() {
               </p>
             </div>
             <div className="pt-2">
-              <Button
-                variant="secondary"
-                size="lg"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Создать колоду ({pairLabel})</span>
-              </Button>
+              {limits?.plan === "pro" ? (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Создать колоду ({pairLabel})</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => setIsPaywallOpen(true)}
+                  className="w-full text-xs font-bold h-12 rounded-2xl flex items-center justify-center gap-2 bg-gradient-to-r from-[#B7A0F6] to-[#9FE2CE] text-[#2A2352] hover:opacity-90"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>Попробовать ИИ-суперсилы</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </Card>
         ) : (

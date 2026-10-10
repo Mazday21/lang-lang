@@ -1,10 +1,14 @@
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 
-export const DAILY_FREE_LIMIT = 20;
+/**
+ * Free accounts get a one-time trial: 5 AI checks per account (lifetime, no daily reset).
+ * Pro accounts have unlimited checks. AI deck generation is a Pro feature.
+ */
+export const FREE_TRIAL_LIMIT = 5;
 
 export interface UserLimitStatus {
   plan: "free" | "pro";
-  ai_requests_today: number;
+  ai_requests_used: number;
   limit: number;
   remaining: number;
 }
@@ -12,15 +16,10 @@ export interface UserLimitStatus {
 // In-memory store for local dev / unconfigured Supabase
 interface MockUserLimit {
   plan: "free" | "pro";
-  ai_requests_today: number;
-  last_request_date: string;
+  ai_requests_total: number;
 }
 
 const mockLimits = new Map<string, MockUserLimit>();
-
-function getTodayString(): string {
-  return new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-}
 
 function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -29,68 +28,56 @@ function isSupabaseConfigured(): boolean {
   );
 }
 
+function planLimit(plan: "free" | "pro"): number {
+  return plan === "pro" ? 999999 : FREE_TRIAL_LIMIT;
+}
+
+function status(plan: "free" | "pro", used: number): UserLimitStatus {
+  const limit = planLimit(plan);
+  return {
+    plan,
+    ai_requests_used: used,
+    limit,
+    remaining: Math.max(0, limit - used),
+  };
+}
+
 /**
  * Retrieves the current user's AI limit status.
  */
 export async function getUserLimits(userId: string): Promise<UserLimitStatus> {
-  const today = getTodayString();
-
   if (!isSupabaseConfigured()) {
-    let mock = mockLimits.get(userId);
-    if (!mock) {
-      mock = { plan: "free", ai_requests_today: 0, last_request_date: today };
-      mockLimits.set(userId, mock);
-    } else if (mock.last_request_date !== today) {
-      mock.ai_requests_today = 0;
-      mock.last_request_date = today;
-      mockLimits.set(userId, mock);
-    }
-
-    const limit = mock.plan === "pro" ? 999999 : DAILY_FREE_LIMIT;
-    return {
-      plan: mock.plan,
-      ai_requests_today: mock.ai_requests_today,
-      limit,
-      remaining: Math.max(0, limit - mock.ai_requests_today),
-    };
+    const mock = mockLimits.get(userId) || { plan: "free" as const, ai_requests_total: 0 };
+    mockLimits.set(userId, mock);
+    return status(mock.plan, mock.ai_requests_total);
   }
 
   const supabase = getSupabaseAdminClient();
-  const { data: user, error } = await supabase
+  let { data: user, error } = await supabase
     .from("users")
-    .select("plan, ai_requests_today, last_request_date")
+    .select("plan, ai_requests_total")
     .eq("id", userId)
     .single();
 
   if (error || !user) {
-    console.warn("Could not fetch user limits from Supabase:", error);
-    return {
-      plan: "free",
-      ai_requests_today: 0,
-      limit: DAILY_FREE_LIMIT,
-      remaining: DAILY_FREE_LIMIT,
+    // Legacy tables without ai_requests_total column
+    const legacy = await supabase
+      .from("users")
+      .select("plan, ai_requests_today")
+      .eq("id", userId)
+      .single();
+    if (legacy.error || !legacy.data) {
+      return status("free", 0);
+    }
+    user = {
+      plan: legacy.data.plan,
+      ai_requests_total: legacy.data.ai_requests_today || 0,
     };
+    error = null;
   }
 
   const plan = (user.plan === "pro" ? "pro" : "free") as "free" | "pro";
-  let requestsToday = user.ai_requests_today || 0;
-
-  // Reset if new day
-  if (user.last_request_date !== today) {
-    requestsToday = 0;
-    await supabase
-      .from("users")
-      .update({ ai_requests_today: 0, last_request_date: today })
-      .eq("id", userId);
-  }
-
-  const limit = plan === "pro" ? 999999 : DAILY_FREE_LIMIT;
-  return {
-    plan,
-    ai_requests_today: requestsToday,
-    limit,
-    remaining: Math.max(0, limit - requestsToday),
-  };
+  return status(plan, user.ai_requests_total || 0);
 }
 
 /**
@@ -99,82 +86,87 @@ export async function getUserLimits(userId: string): Promise<UserLimitStatus> {
 export async function checkAndConsumeAILimit(
   userId: string
 ): Promise<{ allowed: boolean; remaining: number; totalToday: number; plan: string; error?: string }> {
-  const today = getTodayString();
+  const EXHAUSTED = "Бесплатные AI-проверки (5) исчерпаны — оформите подписку Pro";
 
   if (!isSupabaseConfigured()) {
-    let mock = mockLimits.get(userId);
-    if (!mock) {
-      mock = { plan: "free", ai_requests_today: 0, last_request_date: today };
-      mockLimits.set(userId, mock);
-    } else if (mock.last_request_date !== today) {
-      mock.ai_requests_today = 0;
-      mock.last_request_date = today;
-    }
+    const mock = mockLimits.get(userId) || { plan: "free" as const, ai_requests_total: 0 };
 
-    if (mock.plan === "free" && mock.ai_requests_today >= DAILY_FREE_LIMIT) {
+    if (mock.plan === "free" && mock.ai_requests_total >= FREE_TRIAL_LIMIT) {
       return {
         allowed: false,
         remaining: 0,
-        totalToday: mock.ai_requests_today,
+        totalToday: mock.ai_requests_total,
         plan: mock.plan,
-        error: "Дневной лимит AI-проверок (20) исчерпан",
+        error: EXHAUSTED,
       };
     }
 
-    mock.ai_requests_today += 1;
+    mock.ai_requests_total += 1;
     mockLimits.set(userId, mock);
 
-    const limit = mock.plan === "pro" ? 999999 : DAILY_FREE_LIMIT;
     return {
       allowed: true,
-      remaining: Math.max(0, limit - mock.ai_requests_today),
-      totalToday: mock.ai_requests_today,
+      remaining: Math.max(0, planLimit(mock.plan) - mock.ai_requests_total),
+      totalToday: mock.ai_requests_total,
       plan: mock.plan,
     };
   }
 
   const supabase = getSupabaseAdminClient();
-  const { data: user, error } = await supabase
+  let { data: user, error } = await supabase
     .from("users")
-    .select("plan, ai_requests_today, last_request_date")
+    .select("plan, ai_requests_total")
     .eq("id", userId)
     .single();
 
   if (error || !user) {
-    // If user record not found yet, allow in fallback
-    return { allowed: true, remaining: DAILY_FREE_LIMIT - 1, totalToday: 1, plan: "free" };
+    // Legacy tables without ai_requests_total column
+    const legacy = await supabase
+      .from("users")
+      .select("plan, ai_requests_today")
+      .eq("id", userId)
+      .single();
+    if (legacy.error || !legacy.data) {
+      // If user record not found yet, allow in fallback
+      return { allowed: true, remaining: FREE_TRIAL_LIMIT - 1, totalToday: 1, plan: "free" };
+    }
+    user = {
+      plan: legacy.data.plan,
+      ai_requests_total: legacy.data.ai_requests_today || 0,
+    };
+    error = null;
   }
 
   const plan = (user.plan === "pro" ? "pro" : "free") as "free" | "pro";
-  let requestsToday = user.ai_requests_today || 0;
+  const used = user.ai_requests_total || 0;
 
-  if (user.last_request_date !== today) {
-    requestsToday = 0;
-  }
-
-  if (plan === "free" && requestsToday >= DAILY_FREE_LIMIT) {
+  if (plan === "free" && used >= FREE_TRIAL_LIMIT) {
     return {
       allowed: false,
       remaining: 0,
-      totalToday: requestsToday,
+      totalToday: used,
       plan,
-      error: "Дневной лимит AI-проверок (20) исчерпан",
+      error: EXHAUSTED,
     };
   }
 
-  const updatedCount = requestsToday + 1;
-  await supabase
+  const updatedCount = used + 1;
+  const { error: updateErr } = await supabase
     .from("users")
-    .update({
-      ai_requests_today: updatedCount,
-      last_request_date: today,
-    })
+    .update({ ai_requests_total: updatedCount })
     .eq("id", userId);
 
-  const limit = plan === "pro" ? 999999 : DAILY_FREE_LIMIT;
+  if (updateErr) {
+    // Legacy tables: fall back to the old daily counter column
+    await supabase
+      .from("users")
+      .update({ ai_requests_today: updatedCount })
+      .eq("id", userId);
+  }
+
   return {
     allowed: true,
-    remaining: Math.max(0, limit - updatedCount),
+    remaining: Math.max(0, planLimit(plan) - updatedCount),
     totalToday: updatedCount,
     plan,
   };
@@ -184,21 +176,22 @@ export async function checkAndConsumeAILimit(
  * Resets user limits (for dev and testing)
  */
 export async function resetUserLimits(userId: string): Promise<void> {
-  const today = getTodayString();
   if (!isSupabaseConfigured()) {
     const mock = mockLimits.get(userId);
     if (mock) {
-      mock.ai_requests_today = 0;
-      mock.last_request_date = today;
+      mock.ai_requests_total = 0;
     }
     return;
   }
 
   const supabase = getSupabaseAdminClient();
-  await supabase
+  const { error } = await supabase
     .from("users")
-    .update({ ai_requests_today: 0, last_request_date: today })
+    .update({ ai_requests_total: 0 })
     .eq("id", userId);
+  if (error) {
+    await supabase.from("users").update({ ai_requests_today: 0 }).eq("id", userId);
+  }
 }
 
 /**
@@ -206,11 +199,7 @@ export async function resetUserLimits(userId: string): Promise<void> {
  */
 export async function setUserPlan(userId: string, plan: "free" | "pro"): Promise<void> {
   if (!isSupabaseConfigured()) {
-    const mock = mockLimits.get(userId) || {
-      plan: "free",
-      ai_requests_today: 0,
-      last_request_date: getTodayString(),
-    };
+    const mock = mockLimits.get(userId) || { plan: "free" as const, ai_requests_total: 0 };
     mock.plan = plan;
     mockLimits.set(userId, mock);
     return;

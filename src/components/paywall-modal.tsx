@@ -81,7 +81,7 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token }: PaywallMo
             Лимит исчерпан
           </Badge>
           <CardTitle className="text-lg font-semibold text-[#2A2352]">
-            Дневной лимит AI-проверок исчерпан
+            Бесплатные AI-проверки закончились
           </CardTitle>
           <CardDescription className="text-xs text-[#7B6FA6] leading-relaxed">
             Бесплатные 20 проверок на сегодня подошли к концу. Возвращайтесь завтра или разблокируйте безлимит, чтобы продолжить прямо сейчас.
