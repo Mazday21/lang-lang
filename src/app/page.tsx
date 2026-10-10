@@ -160,6 +160,9 @@ export default function HubPage() {
     }
   }, [isAuthLoading, fetchDecksAndLimits]);
 
+  // True when the user picked languages via the onboarding wizard in this session
+  const skipLangStepRef = useRef(false);
+
   // Background content pipeline: fills shared curriculum + personal top-up decks.
   // Runs at most once per language pair per session; never blocks the UI.
   const populatedPairRef = useRef<string | null>(null);
@@ -196,6 +199,8 @@ export default function HubPage() {
   }, [isAuthLoading, user, token, fetchDecksAndLimits]);
 
   const handleCompleteOnboarding = async (native: string, target: string) => {
+    // Languages were just chosen — no need to ask again before the mini-test
+    skipLangStepRef.current = true;
     await setLanguages(native, target);
     await fetchDecksAndLimits(native, target);
   };
@@ -210,7 +215,8 @@ export default function HubPage() {
   const handlePlacementComplete = async (
     level: number,
     mode: PlacementMode,
-    answers: number[]
+    answers: number[],
+    pair?: string
   ) => {
     // Optimistic update so the modal closes smoothly
     setProgress((prev) => ({
@@ -226,7 +232,7 @@ export default function HubPage() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const body =
         mode === "test"
-          ? { pair: currentPairKey, answers }
+          ? { pair: pair || currentPairKey, answers }
           : mode === "manual"
           ? { level }
           : { skip: true };
@@ -317,10 +323,12 @@ export default function HubPage() {
 
   return (
     <main className="min-h-screen bg-[#FDFBF7] text-[#4A4453] px-4 py-6 md:py-10 max-w-lg mx-auto flex flex-col gap-5">
-      {/* Placement Mini-Test Modal */}
+      {/* Placement Mini-Test Modal (language banner → test for new users) */}
       <PlacementTestModal
         isOpen={isTestOpen || needsPlacement}
         pairKey={currentPairKey}
+        startWithLanguage={needsPlacement && !skipLangStepRef.current}
+        onLanguagesChange={handleSwitchLanguagePair}
         onComplete={handlePlacementComplete}
         onClose={() => setIsTestOpen(false)}
         canClose={!needsPlacement || isTestOpen}

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, X, GraduationCap, ArrowRight, ArrowLeft } from "lucide-react";
+import { Check, X, GraduationCap, ArrowRight, ArrowLeft, Globe } from "lucide-react";
 import {
   getPlacementTest,
   scoreToLevel,
@@ -16,24 +16,52 @@ export type PlacementMode = "test" | "manual" | "skip";
 interface PlacementTestModalProps {
   isOpen: boolean;
   pairKey: string;
-  onComplete: (level: number, mode: PlacementMode, answers: number[]) => Promise<void> | void;
+  /** Show the language selection banner before the test (new users). */
+  startWithLanguage?: boolean;
+  onComplete: (
+    level: number,
+    mode: PlacementMode,
+    answers: number[],
+    pair?: string
+  ) => Promise<void> | void;
+  onLanguagesChange?: (native: string, target: string) => Promise<void> | void;
   onClose: () => void;
   canClose?: boolean;
 }
 
-type Step = "questions" | "manual" | "done";
+type Step = "language" | "questions" | "manual" | "done";
+
+const NATIVE_OPTIONS = [
+  { code: "ru", badge: "RU", name: "Русский" },
+  { code: "uz", badge: "UZ", name: "O'zbekcha" },
+];
+
+function getTargetOptions(native: string) {
+  if (native === "ru") {
+    return [
+      { code: "uz", badge: "UZ", name: "Узбекский" },
+      { code: "en", badge: "EN", name: "Английский" },
+    ];
+  }
+  return [
+    { code: "ru", badge: "RU", name: "Русский" },
+    { code: "en", badge: "EN", name: "Английский" },
+  ];
+}
 
 export function PlacementTestModal({
   isOpen,
   pairKey,
+  startWithLanguage = false,
   onComplete,
+  onLanguagesChange,
   onClose,
   canClose = true,
 }: PlacementTestModalProps) {
-  const test = getPlacementTest(pairKey);
-  const questions: PlacementQuestion[] = test?.questions || [];
-
-  const [step, setStep] = useState<Step>("questions");
+  const [step, setStep] = useState<Step>("language");
+  const [selNative, setSelNative] = useState<string>("ru");
+  const [selTarget, setSelTarget] = useState<string>("uz");
+  const [activePair, setActivePair] = useState<string>(pairKey);
   const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [manualLevel, setManualLevel] = useState<number | null>(null);
@@ -47,16 +75,48 @@ export function PlacementTestModal({
 
   useEffect(() => {
     if (isOpen) {
-      setStep("questions");
+      const [nat, tar] = pairKey.split("-");
+      setSelNative(nat || "ru");
+      setSelTarget(tar || "uz");
+      setActivePair(pairKey);
+      setStep(startWithLanguage ? "language" : "questions");
       setQIndex(0);
       setAnswers([]);
       setManualLevel(null);
       setResult(null);
       setIsSaving(false);
     }
-  }, [isOpen]);
+  }, [isOpen, pairKey, startWithLanguage]);
 
   if (!isOpen) return null;
+
+  const test = getPlacementTest(activePair);
+  const questions: PlacementQuestion[] = test?.questions || [];
+  const question = questions[qIndex];
+
+  const handleSelectNative = (code: string) => {
+    setSelNative(code);
+    window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.();
+    const options = getTargetOptions(code);
+    if (!options.some((o) => o.code === selTarget)) {
+      setSelTarget(options[0].code);
+    }
+  };
+
+  const handleLanguageNext = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await onLanguagesChange?.(selNative, selTarget);
+      setActivePair(`${selNative}-${selTarget}`);
+      setQIndex(0);
+      setAnswers([]);
+      setStep("questions");
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.("success");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const finishTest = async (finalAnswers: number[]) => {
     setIsSaving(true);
@@ -68,7 +128,7 @@ export function PlacementTestModal({
     setResult({ level, mode: "test", score, total: questions.length });
     setStep("done");
     try {
-      await onComplete(level, "test", finalAnswers);
+      await onComplete(level, "test", finalAnswers, activePair);
     } finally {
       setIsSaving(false);
     }
@@ -95,7 +155,7 @@ export function PlacementTestModal({
     setResult({ level: manualLevel, mode: "manual", score: 0, total: 0 });
     setStep("done");
     try {
-      await onComplete(manualLevel, "manual", []);
+      await onComplete(manualLevel, "manual", [], activePair);
     } finally {
       setIsSaving(false);
     }
@@ -105,21 +165,120 @@ export function PlacementTestModal({
     if (isSaving) return;
     setIsSaving(true);
     try {
-      await onComplete(0, "skip", []);
+      await onComplete(0, "skip", [], activePair);
     } finally {
       setIsSaving(false);
       onClose();
     }
   };
 
-  const question = questions[qIndex];
-  const progress =
-    step === "done" ? 100 : step === "manual" ? 50 : Math.round((qIndex / questions.length) * 100);
-
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm bg-white rounded-3xl border-none shadow-xl max-h-[90vh] overflow-y-auto">
         <CardContent className="p-6">
+          {step === "language" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 rounded-2xl bg-[#F5EFEB] flex items-center justify-center">
+                    <Globe className="h-5 w-5 text-[#482C4E]" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#4A4453]">Языки обучения</h2>
+                    <p className="text-[11px] text-[#8A8493]">
+                      Шаг перед мини-тестом на уровень
+                    </p>
+                  </div>
+                </div>
+                {canClose && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="h-8 w-8 rounded-xl hover:bg-[#F5EFEB] text-[#8A8493] flex items-center justify-center"
+                    title="Закрыть"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              <p className="text-xs text-[#8A8493] leading-relaxed">
+                Выберите ваш родной язык и язык, который хотите изучать. Тест и колоды
+                будут подобраны именно для этой пары.
+              </p>
+
+              {/* Native language */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-[#8A8493] uppercase tracking-wider">
+                  1. Родной язык:
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {NATIVE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.code}
+                      type="button"
+                      onClick={() => handleSelectNative(opt.code)}
+                      className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                        selNative === opt.code
+                          ? "border-[#E0BBE4] bg-white font-medium"
+                          : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
+                      }`}
+                    >
+                      <span className="text-xs text-[#4A4453] flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#E8E2D9]">
+                          {opt.badge}
+                        </span>
+                        <span>{opt.name}</span>
+                      </span>
+                      {selNative === opt.code && <Check className="h-3.5 w-3.5 text-[#2A472C]" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Target language */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-[#8A8493] uppercase tracking-wider">
+                  2. Язык изучения:
+                </span>
+                <div className="space-y-2">
+                  {getTargetOptions(selNative).map((opt) => (
+                    <button
+                      key={opt.code}
+                      type="button"
+                      onClick={() => {
+                        setSelTarget(opt.code);
+                        window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.();
+                      }}
+                      className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                        selTarget === opt.code
+                          ? "border-[#E0BBE4] bg-white font-medium"
+                          : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
+                      }`}
+                    >
+                      <span className="text-xs text-[#4A4453] flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#E8E2D9]">
+                          {opt.badge}
+                        </span>
+                        <span>{opt.name}</span>
+                      </span>
+                      {selTarget === opt.code && <Check className="h-3.5 w-3.5 text-[#2A472C]" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                onClick={handleLanguageNext}
+                disabled={isSaving}
+                className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
+              >
+                <span>{isSaving ? "Сохраняем..." : "Далее — мини-тест"}</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
           {step === "questions" && question && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -150,7 +309,7 @@ export function PlacementTestModal({
               <div className="h-1.5 w-full bg-[#F5EFEB] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#E0BBE4] rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${Math.round((qIndex / questions.length) * 100)}%` }}
                 />
               </div>
 
