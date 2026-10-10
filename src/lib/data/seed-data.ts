@@ -367,6 +367,246 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
   // 2. RU -> EN
   "ru-en": [
     {
+      title: "Грамматика: прошедшее время",
+      description: "Углублённое изучение: Past Simple правильных и неправильных глаголов",
+      native_language: "ru",
+      target_language: "en",
+      language_pair: "ru-en",
+      level: 3,
+      cards: [
+        {
+          front: "Я сделал",
+          back: "I did",
+          rule_description: "Прошедшее время правильных глаголов: глагол + -ed (worked, played).",
+        },
+        {
+          front: "Ты пошёл",
+          back: "You went",
+          rule_description: "Неправильный глагол: go — went — gone.",
+        },
+        {
+          front: "Она прочитала",
+          back: "She read",
+          rule_description: "read в прошлом читается как «red» — совпадает с цветом red.",
+        },
+        {
+          front: "Мы были",
+          back: "We were",
+          rule_description: "to be в прошлом: I/he/she/it — was, you/we/they — were.",
+        },
+        {
+          front: "Я не понял",
+          back: "I didn't understand",
+          rule_description: "Отрицание: didn't + инфинитив без to.",
+        },
+        {
+          front: "Что случилось?",
+          back: "What happened?",
+          rule_description: "happen (случаться) — правильный глагол: happened.",
+        },
+      ],
+    },
+    {
+      title: "Эмоции и устойчивые выражения",
+      description: "Углублённое изучение: чувства, характер и английские идиомы",
+      native_language: "ru",
+      target_language: "en",
+      language_pair: "ru-en",
+      level: 3,
+      cards: [
+        {
+          front: "Я рад",
+          back: "I am glad",
+          rule_description: "glad (рад); «I'm glad to hear it» — рад это слышать.",
+        },
+        {
+          front: "Я устал",
+          back: "I am tired",
+          rule_description: "tired (уставший) + to be: «I'm tired».",
+        },
+        {
+          front: "Не переживайте!",
+          back: "Don't worry!",
+          rule_description: "Don't worry — букв. «не волнуйтесь».",
+        },
+        {
+          front: "Держать слово",
+          back: "To keep one's word",
+          rule_description: "Идиома: keep (держать) + one's word (чье-то слово) — сдерживать обещание.",
+        },
+        {
+          front: "Ломать голову",
+          back: "To rack one's brains",
+          rule_description: "Идиома: букв. «трясти мозги» — много думать, решать задачу.",
+        },
+        {
+          front: "Как скажешь",
+          back: "Whatever you say",
+          rule_description: "Разговорный вариант «как скажешь / как хочешь».",
+        },
+      ],
+    },
+    {
+      title: "Еда и продукты",
+      description: "Продукты питания, заказ еды и базовая лексика кухни",
+      native_language: "ru",
+      target_language: "en",
+      language_pair: "ru-en",
+      level: 2,
+      cards: [
+        {
+          front: "Хлеб",
+          back: "Bread",
+          rule_description: "Uncountable: «a loaf of bread» — буханка хлеба.",
+        },
+        {
+          front: "Мясо",
+          back: "Meat",
+          rule_description: "«beef» — говядина, «chicken» — курица, «pork» — свинина.",
+        },
+        {
+          front: "Молоко и вода",
+          back: "Milk and water",
+          rule_description: "Uncountable — употребляются без артикля в общем значении.",
+        },
+        {
+          front: "Чай?",
+          back: "Would you like some tea?",
+          rule_description: "Вежливое предложение: Would you like + some + напиток.",
+        },
+        {
+          front: "Я проголодался",
+          back: "I am hungry",
+          rule_description: "hungry (голодный) + to be: «I'm hungry».",
+        },
+        {
+          front: "Очень вкусно!",
+          back: "It's very delicious!",
+          rule_description: "delicious (вкусный) — сильный синоним tasty.",
+        },
+      ],
+    },
+    {
+      title: "Время и вопросительные слова",
+      description: "Дни, время и ключевые слова для вопросов",
+      native_language: "ru",
+      target_language: "en",
+      language_pair: "ru-en",
+      level: 2,
+      cards: [
+        {
+          front: "Сегодня",
+          back: "Today",
+          rule_description: "today (сегодня), tomorrow (завтра), yesterday (вчера).",
+        },
+        {
+          front: "Завтра",
+          back: "Tomorrow",
+          rule_description: "tomorrow (завтра) — без предлога: «see you tomorrow».",
+        },
+        {
+          front: "Вчера",
+          back: "Yesterday",
+          rule_description: "yesterday (вчера) + прошедшее время: «I went yesterday».",
+        },
+        {
+          front: "Кто?",
+          back: "Who?",
+          rule_description: "Who — кто (подлежащее), whom — кого (дополнение).",
+        },
+        {
+          front: "Когда?",
+          back: "When?",
+          rule_description: "When — когда (о времени).",
+        },
+        {
+          front: "Почему?",
+          back: "Why?",
+          rule_description: "Ответ часто через because (потому что).",
+        },
+      ],
+    },
+    {
+      title: "Цвета и признаки",
+      description: "Основные цвета и противоположные признаки для описания предметов",
+      native_language: "ru",
+      target_language: "en",
+      language_pair: "ru-en",
+      level: 1,
+      cards: [
+        {
+          front: "Красный цвет",
+          back: "Red",
+          rule_description: "Red (красный); «red color» — красный цвет.",
+        },
+        {
+          front: "Синий / голубой",
+          back: "Blue",
+          rule_description: "Blue покрывает и синий, и голубой; «light blue» — голубой.",
+        },
+        {
+          front: "Жёлтый и зелёный",
+          back: "Yellow and green",
+          rule_description: "and — союз «и».",
+        },
+        {
+          front: "Белый и чёрный",
+          back: "White and black",
+          rule_description: "Базовая пара противоположных цветов.",
+        },
+        {
+          front: "Большой и маленький",
+          back: "Big and small",
+          rule_description: "Big/small; «large» — более формальный синоним big.",
+        },
+        {
+          front: "Хороший / плохой",
+          back: "Good / bad",
+          rule_description: "Универсальные оценки качества.",
+        },
+      ],
+    },
+    {
+      title: "Частые глаголы и местоимения",
+      description: "Самые употребимые глаголы и местоимения для базовых фраз",
+      native_language: "ru",
+      target_language: "en",
+      language_pair: "ru-en",
+      level: 1,
+      cards: [
+        {
+          front: "Я хочу",
+          back: "I want",
+          rule_description: "want + to: «I want to go» — я хочу пойти.",
+        },
+        {
+          front: "Ты знаешь?",
+          back: "Do you know?",
+          rule_description: "Вопрос через вспомогательный do + know (знать).",
+        },
+        {
+          front: "Мы идём",
+          back: "We are going",
+          rule_description: "Настоящее длительное: to be (are) + глагол с -ing.",
+        },
+        {
+          front: "Я вижу",
+          back: "I see",
+          rule_description: "See (видеть) — неправильный глагол: see — saw — seen.",
+        },
+        {
+          front: "Я не знаю",
+          back: "I don't know",
+          rule_description: "Отрицание через don't + инфинитив без to.",
+        },
+        {
+          front: "Вы понимаете?",
+          back: "Do you understand?",
+          rule_description: "Вежливое «вы» = you; вопрос через do.",
+        },
+      ],
+    },
+    {
       title: "Essential Phrases & Greetings",
       description: "Базовые фразы вежливости, приветствия и повседневный этикет",
       native_language: "ru",
@@ -824,6 +1064,246 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
 
   // 4. UZ -> EN
   "uz-en": [
+    {
+      title: "O'tgan zamon fe'llari",
+      description: "Chuqur o'rganish: Past Simple — to'g'ri va noto'g'ri fe'llar",
+      native_language: "uz",
+      target_language: "en",
+      language_pair: "uz-en",
+      level: 3,
+      cards: [
+        {
+          front: "Men qildim",
+          back: "I did",
+          rule_description: "To'g'ri fe'llarda o'tgan zamon: fe'l + -ed (worked, played).",
+        },
+        {
+          front: "Sen bording",
+          back: "You went",
+          rule_description: "Noto'g'ri fe'l: go — went — gone.",
+        },
+        {
+          front: "U o'qidi",
+          back: "She read",
+          rule_description: "read o'tgan zamonda «red» deb talaffuz qilinadi.",
+        },
+        {
+          front: "Biz edik",
+          back: "We were",
+          rule_description: "to be o'tgan zamonda: I/he/she/it — was, you/we/they — were.",
+        },
+        {
+          front: "Tushunmadim",
+          back: "I didn't understand",
+          rule_description: "Inkor: didn't + infinitiv (to siz).",
+        },
+        {
+          front: "Nima bo'ldi?",
+          back: "What happened?",
+          rule_description: "happen (bo'lmoq/sodir bo'loq) — to'g'ri fe'l: happened.",
+        },
+      ],
+    },
+    {
+      title: "His-tuyg'ular va iboralar",
+      description: "Chuqur o'rganish: kayfiyat, xarakter va ingliz iboralari",
+      native_language: "uz",
+      target_language: "en",
+      language_pair: "uz-en",
+      level: 3,
+      cards: [
+        {
+          front: "Men xursandman",
+          back: "I am glad",
+          rule_description: "glad (xursand); «I'm glad to hear it» — buni eshitganimdan xursandman.",
+        },
+        {
+          front: "Charchadim",
+          back: "I am tired",
+          rule_description: "tired (charchagan) + to be: «I'm tired».",
+        },
+        {
+          front: "Xavotir olmang!",
+          back: "Don't worry!",
+          rule_description: "Don't worry — so'zma-so'z «bezovta bo'lmang».",
+        },
+        {
+          front: "So'zida turmoq",
+          back: "To keep one's word",
+          rule_description: "Ibora: keep (saqlamoq) + one's word (so'z) — va'dani bajarish.",
+        },
+        {
+          front: "Bosh qotirmoq",
+          back: "To rack one's brains",
+          rule_description: "Ibora: so'zma-so'z «miyani tebratmoq» — ko'p o'ylash.",
+        },
+        {
+          front: "Xo'p, xohlaganingizdek",
+          back: "Whatever you say",
+          rule_description: "Norasmiy variant: «xohlaganingizdek».",
+        },
+      ],
+    },
+    {
+      title: "Oziq-ovqat va ichimliklar",
+      description: "Oziq-ovqat mahsulotlari, buyurtma berish va oshxona leksikasi",
+      native_language: "uz",
+      target_language: "en",
+      language_pair: "uz-en",
+      level: 2,
+      cards: [
+        {
+          front: "Non",
+          back: "Bread",
+          rule_description: "Sanalmaydigan so'z: «a loaf of bread» — bir dona non.",
+        },
+        {
+          front: "Go'sht",
+          back: "Meat",
+          rule_description: "beef (mol go'shti), chicken (tovuq go'shti), pork (cho'chqa go'shti).",
+        },
+        {
+          front: "Sut va suv",
+          back: "Milk and water",
+          rule_description: "Sanalmaydigan so'zlar — artiklsiz ishlatiladi.",
+        },
+        {
+          front: "Choy ichasizmi?",
+          back: "Would you like some tea?",
+          rule_description: "Xushmuomala taklif: Would you like + some + ichimlik.",
+        },
+        {
+          front: "Ochdim",
+          back: "I am hungry",
+          rule_description: "hungry (och) + to be: «I'm hungry».",
+        },
+        {
+          front: "Juda mazali!",
+          back: "It's very delicious!",
+          rule_description: "delicious (mazali) — kuchli ma'noli so'z.",
+        },
+      ],
+    },
+    {
+      title: "Vaqt va savol so'zlari",
+      description: "Kunlar, vaqt va savol berish uchun kalit so'zlar",
+      native_language: "uz",
+      target_language: "en",
+      language_pair: "uz-en",
+      level: 2,
+      cards: [
+        {
+          front: "Bugun",
+          back: "Today",
+          rule_description: "bugun (today), ertaga (tomorrow), kecha (yesterday).",
+        },
+        {
+          front: "Ertaga",
+          back: "Tomorrow",
+          rule_description: "tomorrow (ertaga) — predsiz: «see you tomorrow».",
+        },
+        {
+          front: "Kecha",
+          back: "Yesterday",
+          rule_description: "yesterday (kecha) + o'tgan zamon: «I went yesterday».",
+        },
+        {
+          front: "Kim?",
+          back: "Who?",
+          rule_description: "Who (kim), whom (kimni) — ega va to'ldiruvchi.",
+        },
+        {
+          front: "Qachon?",
+          back: "When?",
+          rule_description: "When — vaqt haqida savol.",
+        },
+        {
+          front: "Nima uchun?",
+          back: "Why?",
+          rule_description: "Javob ko'pincha because (chunki) orqali beriladi.",
+        },
+      ],
+    },
+    {
+      title: "Ranglar va belgilar",
+      description: "Asosiy ranglar va qarama-qarshi belgilar",
+      native_language: "uz",
+      target_language: "en",
+      language_pair: "uz-en",
+      level: 1,
+      cards: [
+        {
+          front: "Qizil rang",
+          back: "Red",
+          rule_description: "Qizil (red) + rang (color).",
+        },
+        {
+          front: "Ko'k",
+          back: "Blue",
+          rule_description: "Ko'k — «light blue» (och ko'k) ham, «dark blue» (to'q ko'k) ham bo'lishi mumkin.",
+        },
+        {
+          front: "Sariq va yashil",
+          back: "Yellow and green",
+          rule_description: "and — «va» ga teng.",
+        },
+        {
+          front: "Oq va qora",
+          back: "White and black",
+          rule_description: "Asosiy qarama-qarshi ranglar juftligi.",
+        },
+        {
+          front: "Katta va kichik",
+          back: "Big and small",
+          rule_description: "katta (big/large), kichik (small).",
+        },
+        {
+          front: "Yaxshi va yomon",
+          back: "Good and bad",
+          rule_description: "yaxshi (good), yomon (bad).",
+        },
+      ],
+    },
+    {
+      title: "Fe'llar va olmoshlar",
+      description: "Eng ko'p ishlatiladigan fe'llar va olmoshlar",
+      native_language: "uz",
+      target_language: "en",
+      language_pair: "uz-en",
+      level: 1,
+      cards: [
+        {
+          front: "Men xohlayman",
+          back: "I want",
+          rule_description: "want + to: «I want to go» — bormoqchiman.",
+        },
+        {
+          front: "Sen bilasanmi?",
+          back: "Do you know?",
+          rule_description: "Savol yordamchi do orqali: do + know (bilmoq).",
+        },
+        {
+          front: "Biz boryapmiz",
+          back: "We are going",
+          rule_description: "Hozirgi davomiy zamon: to be (are) + fe'l + -ing.",
+        },
+        {
+          front: "Men ko'ryapman",
+          back: "I see",
+          rule_description: "see (ko'rmoq) — noto'g'ri fe'l: see — saw — seen.",
+        },
+        {
+          front: "Bilmayman",
+          back: "I don't know",
+          rule_description: "Inkor: don't + infinitiv (to siz).",
+        },
+        {
+          front: "Tushunyapsizmi?",
+          back: "Do you understand?",
+          rule_description: "understand (tushunmoq); savol do orqali.",
+        },
+      ],
+    },
     {
       title: "Everyday Greetings & Basics",
       description: "Essential phrases for everyday communication",

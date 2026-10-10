@@ -59,6 +59,11 @@ export async function ensureSharedCurriculum(params: {
 }): Promise<{ created: number; skipped: number }> {
   const { userId, native, target } = params;
 
+  // Never generate content for native English speakers (en-ru, en-uz)
+  if (native.toLowerCase() === "en") {
+    return { created: 0, skipped: 0 };
+  }
+
   if (!userId || !isOpenRouterConfigured()) {
     return { created: 0, skipped: 0 };
   }
@@ -104,6 +109,11 @@ export async function topUpPersonalDecks(params: {
   target: string;
 }): Promise<{ created: boolean; reason: string }> {
   const { userId, native, target } = params;
+
+  // Never generate content for native English speakers (en-ru, en-uz)
+  if (native.toLowerCase() === "en") {
+    return { created: false, reason: "not_supported_pair" };
+  }
 
   if (!isOpenRouterConfigured()) {
     return { created: false, reason: "ai_unavailable" };
