@@ -17,7 +17,9 @@ import {
   Zap,
   ExternalLink,
   Loader2,
+  Globe,
 } from "lucide-react";
+import { useI18n } from "@/context/i18n-context";
 import {
   UserLimitStatus,
   FREE_TRIAL_LIMIT,
@@ -29,6 +31,7 @@ import {
 export default function SettingsPage() {
   const router = useRouter();
   const { user, token, isLoading: isAuthLoading } = useAuth();
+  const { t, lang, setLang } = useI18n();
 
   const [limits, setLimits] = useState<UserLimitStatus | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -132,13 +135,13 @@ export default function SettingsPage() {
           (t: { id: string; username: string | null }) => t.id === id
         );
         setDevMessage(
-          `✅ Тестировщик добавлен: ${added?.username ? `@${added.username}` : id}`
+          `✅ ${t("Тестировщик добавлен: {who}", { who: added?.username ? `@${added.username}` : id })}`
         );
       } else {
-        setDevMessage(`❌ ${data.error || "Не удалось добавить тестировщика"}`);
+        setDevMessage(`❌ ${data.error || t("Не удалось добавить тестировщика")}`);
       }
     } catch {
-      setDevMessage("❌ Не удалось добавить тестировщика");
+      setDevMessage(`❌ ${t("Не удалось добавить тестировщика")}`);
     } finally {
       setIsSavingTester(false);
     }
@@ -160,12 +163,12 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         setDevInfo((prev) => (prev ? { ...prev, testers: data.testers || [] } : prev));
-        setDevMessage(`✅ Тестировщик ${id} удалён`);
+        setDevMessage(`✅ ${t("Тестировщик {id} удалён", { id })}`);
       } else {
-        setDevMessage(`❌ ${data.error || "Не удалось удалить тестировщика"}`);
+        setDevMessage(`❌ ${data.error || t("Не удалось удалить тестировщика")}`);
       }
     } catch {
-      setDevMessage("❌ Не удалось удалить тестировщика");
+      setDevMessage(`❌ ${t("Не удалось удалить тестировщика")}`);
     } finally {
       setIsSavingTester(false);
     }
@@ -194,7 +197,7 @@ export default function SettingsPage() {
         }
       }
     } catch {
-      setMessage("Не удалось инициировать оплату.");
+      setMessage(t("Не удалось инициировать оплату."));
     } finally {
       setIsCheckingOut(false);
     }
@@ -215,10 +218,10 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         setLimits(data);
-        setMessage(plan === "pro" ? "Тариф Pro успешно активирован!" : "Переключено на базовый тариф Free");
+        setMessage(plan === "pro" ? t("Тариф Pro успешно активирован!") : t("Переключено на базовый тариф Free"));
       }
     } catch {
-      setMessage("Не удалось обновить тариф");
+      setMessage(t("Не удалось обновить тариф"));
     } finally {
       setIsUpdating(false);
     }
@@ -239,10 +242,10 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         setLimits(data);
-        setMessage("Счетчик AI-проверок сброшен на 0");
+        setMessage(t("Счетчик AI-проверок сброшен на 0"));
       }
     } catch {
-      setMessage("Не удалось сбросить счетчик");
+      setMessage(t("Не удалось сбросить счетчик"));
     } finally {
       setIsUpdating(false);
     }
@@ -264,9 +267,9 @@ export default function SettingsPage() {
           className="flex items-center gap-1 text-xs text-[#7B6FA6] hover:text-[#2A2352] transition-colors -ml-1 p-1"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>В хаб</span>
+          <span>{t("В хаб")}</span>
         </button>
-        <h1 className="text-sm font-semibold text-[#2A2352]">Профиль и Тариф</h1>
+        <h1 className="text-sm font-semibold text-[#2A2352]">{t("Профиль и Тариф")}</h1>
         <div className="w-8" />
       </header>
 
@@ -278,7 +281,7 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-0.5 flex-1 min-w-0">
             <h2 className="text-base font-semibold text-[#2A2352] truncate">
-              {user?.first_name || "Пользователь"}
+              {user?.first_name || t("Пользователь")}
             </h2>
             <p className="text-xs text-[#7B6FA6]">
               {user?.username ? `@${user.username}` : `TG ID: ${user?.telegram_id || "Dev"}`}
@@ -296,7 +299,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
               <Zap className="h-4 w-4 text-[#B7A0F6]" />
-              Лимиты ИИ
+              {t("Лимиты ИИ")}
             </CardTitle>
             <Badge variant={isPro ? "secondary" : "outline"} className="text-[10px]">
               {isPro ? "Pro" : "Free"}
@@ -304,8 +307,8 @@ export default function SettingsPage() {
           </div>
           <CardDescription className="text-xs">
             {isPro
-              ? "Ежедневные лимиты: 60 голосовых проверок и 5 генераций колод"
-              : "Пробный лимит: 5 AI-проверок на аккаунт • генерация колод в Pro"}
+              ? t("Ежедневные лимиты: 60 голосовых проверок и 5 генераций колод")
+              : t("Пробный лимит: 5 AI-проверок на аккаунт • генерация колод в Pro")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-0">
@@ -319,9 +322,9 @@ export default function SettingsPage() {
               {/* Voice checks quota */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="font-medium text-[#2A2352]">AI-проверки голоса</span>
+                  <span className="font-medium text-[#2A2352]">{t("AI-проверки голоса")}</span>
                   <span className="text-[#7B6FA6]">
-                    {voiceUsed} из {voiceLimit} /день
+                    {t("{a} из {b} /день", { a: voiceUsed, b: voiceLimit })}
                   </span>
                 </div>
                 <div className="w-full bg-[#DCD0F5] h-2 rounded-full overflow-hidden">
@@ -334,7 +337,9 @@ export default function SettingsPage() {
                 </div>
                 {!isPro && (
                   <p className="text-[11px] text-[#7B6FA6]">
-                    Пробных проверок на аккаунт осталось: {limits?.remaining ?? FREE_TRIAL_LIMIT}
+                    {t("Пробных проверок на аккаунт осталось: {n}", {
+                      n: limits?.remaining ?? FREE_TRIAL_LIMIT,
+                    })}
                   </p>
                 )}
               </div>
@@ -342,9 +347,11 @@ export default function SettingsPage() {
               {/* Generation quota */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="font-medium text-[#2A2352]">Генерация колод с помощью ИИ</span>
+                  <span className="font-medium text-[#2A2352]">{t("Генерация колод с помощью ИИ")}</span>
                   <span className="text-[#7B6FA6]">
-                    {isPro ? `${genUsed} из ${PRO_DAILY_GENERATION_LIMIT} /день` : "Доступно в Pro"}
+                    {isPro
+                      ? t("{a} из {b} /день", { a: genUsed, b: PRO_DAILY_GENERATION_LIMIT })
+                      : t("Доступно в Pro")}
                   </span>
                 </div>
                 <div className="w-full bg-[#DCD0F5] h-2 rounded-full overflow-hidden">
@@ -367,31 +374,31 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[#2A2352]" />
-              Тариф Pro
+              {t("Тариф Pro")}
             </CardTitle>
             <span className="text-xs font-semibold text-[#2A2352]">39 000 UZS / ⭐️ 150</span>
           </div>
           <CardDescription className="text-xs">
-            Полный фокус на изучении без пауз и ограничений
+            {t("Полный фокус на изучении без пауз и ограничений")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-0">
           <ul className="text-xs text-[#2A2352] space-y-2">
             <li className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-              <span>Создание персональных колод по любой теме с помощью ИИ</span>
+              <span>{t("Создание персональных колод по любой теме с помощью ИИ")}</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-              <span>60 голосовых проверок в день с умным распознаванием речи</span>
+              <span>{t("60 голосовых проверок в день с умным распознаванием речи")}</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-              <span>Умные закрепляющие колоды под ваши слабые места</span>
+              <span>{t("Умные закрепляющие колоды под ваши слабые места")}</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-              <span>Новые функции и обновления — первыми</span>
+              <span>{t("Новые функции и обновления — первыми")}</span>
             </li>
           </ul>
 
@@ -409,7 +416,7 @@ export default function SettingsPage() {
               onClick={() => handleSetPlan("free")}
               className="w-full text-xs text-[#7B6FA6]"
             >
-              Отменить Pro (Вернуться на Free)
+              {t("Отменить Pro (Вернуться на Free)")}
             </Button>
           ) : (
             <Button
@@ -423,7 +430,7 @@ export default function SettingsPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <span>Подписка Pro — 39 000 UZS / ⭐️ 150 Stars</span>
+                  <span>{t("Подписка Pro — 39 000 UZS / ⭐️ 150 Stars")}</span>
                   <ExternalLink className="h-3.5 w-3.5 opacity-70" />
                 </>
               )}
@@ -432,12 +439,49 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Interface Language */}
+      <Card className="border-[#DCD0F5] bg-white rounded-2xl shadow-none">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Globe className="h-4 w-4 text-[#B7A0F6]" />
+            {t("Язык интерфейса")}
+          </CardTitle>
+          <CardDescription className="text-xs">
+            {t("Выберите язык интерфейса приложения")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 gap-2">
+            {(["ru", "uz"] as const).map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => setLang(code)}
+                className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                  lang === code
+                    ? "border-[#B7A0F6] bg-[#F0EAFB] font-medium"
+                    : "border-[#DCD0F5] bg-white hover:border-[#B7A0F6]"
+                }`}
+              >
+                <span className="text-xs text-[#2A2352] flex items-center gap-2">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5]">
+                    {code.toUpperCase()}
+                  </span>
+                  <span>{code === "ru" ? t("Русский") : "O'zbekcha"}</span>
+                </span>
+                {lang === code && <Check className="h-3.5 w-3.5 text-[#1D6B5B]" />}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Dev Testing Controls — visible to the developer and testers only */}
       {(devInfo?.isDev || devInfo?.isTester) && (
         <Card className="border-[#DCD0F5] bg-[#F2ECFC] rounded-2xl shadow-none">
           <CardContent className="p-4 space-y-2.5">
             <p className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
-              Тестирование для разработки
+              {t("Тестирование для разработки")}
             </p>
             <div className="flex gap-2">
               <Button
@@ -448,7 +492,7 @@ export default function SettingsPage() {
                 className="flex-1 text-xs h-9 bg-white"
               >
                 <RefreshCw className="h-3 w-3 mr-1" />
-                Сбросить счетчик ({voiceUsed}/{voiceLimit})
+                {t("Сбросить счетчик ({a}/{b})", { a: voiceUsed, b: voiceLimit })}
               </Button>
               <Button
                 variant="outline"
@@ -457,7 +501,7 @@ export default function SettingsPage() {
                 onClick={() => handleSetPlan(isPro ? "free" : "pro")}
                 className="flex-1 text-xs h-9 bg-white"
               >
-                Переключить на {isPro ? "Free" : "Pro"}
+                {t("Переключить на {plan}", { plan: isPro ? "Free" : "Pro" })}
               </Button>
             </div>
 
@@ -465,7 +509,7 @@ export default function SettingsPage() {
             {devInfo?.isDev && (
               <div className="space-y-2 pt-2.5 border-t border-[#DCD0F5]">
                 <p className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
-                  Тестировщики ({devInfo.testers.length})
+                  {t("Тестировщики ({n})", { n: devInfo.testers.length })}
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -481,7 +525,7 @@ export default function SettingsPage() {
                     onClick={handleAddTester}
                     className="h-9 text-xs px-4 bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0]"
                   >
-                    Добавить
+                    {t("Добавить")}
                   </Button>
                 </div>
 
@@ -503,7 +547,7 @@ export default function SettingsPage() {
                           <span className="text-[11px] text-[#7B6FA6] truncate">
                             {tester.username
                               ? `@${tester.username}`
-                              : tester.first_name || "профиль не найден"}
+                              : tester.first_name || t("профиль не найден")}
                           </span>
                         </div>
                         <button
@@ -512,7 +556,7 @@ export default function SettingsPage() {
                           onClick={() => handleRemoveTester(tester.id)}
                           className="text-[11px] text-[#A63A4B] underline hover:no-underline transition-all shrink-0"
                         >
-                          Удалить
+                          {t("Удалить")}
                         </button>
                       </div>
                     ))}
@@ -520,8 +564,10 @@ export default function SettingsPage() {
                 )}
 
                 <p className="text-[10px] text-[#7B6FA6] leading-relaxed">
-                  Тестировщики получают эти же кнопки в своём аккаунте, но не могут
-                  добавлять других. Ваш ID: {user?.telegram_id || "—"} (разработчик)
+                  {t(
+                    "Тестировщики получают эти же кнопки в своём аккаунте, но не могут добавлять других. Ваш ID: {id} (разработчик)",
+                    { id: user?.telegram_id || "—" }
+                  )}
                 </p>
               </div>
             )}

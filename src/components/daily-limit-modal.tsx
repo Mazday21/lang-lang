@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Moon, Sunrise } from "lucide-react";
+import { useI18n } from "@/context/i18n-context";
 
 interface DailyLimitModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export function DailyLimitModal({
   onSecondary,
   secondaryLabel,
 }: DailyLimitModalProps) {
+  const { t } = useI18n();
+
   if (!isOpen) return null;
 
   const isVoice = kind === "voice";
@@ -40,19 +43,19 @@ export function DailyLimitModal({
 
           <div className="space-y-1.5">
             <h2 className="text-lg font-semibold text-[#2A2352]">
-              {isVoice ? "Вы отлично потрудились!" : "Хватит на сегодня!"}
+              {isVoice ? t("Вы отлично потрудились!") : t("Хватит на сегодня!")}
             </h2>
             <p className="text-xs text-[#7B6FA6] leading-relaxed">
               {isVoice
-                ? "Так много учили сегодня — рекомендуем отдохнуть до завтра. Голосовые проверки уже ждут вас завтра."
-                : "Все колоды на сегодня созданы. Отдохните — завтра снова можно генерировать новые."}
+                ? t("Так много учили сегодня — рекомендуем отдохнуть до завтра. Голосовые проверки уже ждут вас завтра.")
+                : t("Все колоды на сегодня созданы. Отдохните — завтра снова можно генерировать новые.")}
             </p>
           </div>
 
           <div className="p-3 rounded-2xl bg-[#F0EAFB] border border-[#DCD0F5] flex items-center gap-2.5 text-left">
             <Sunrise className="h-4 w-4 text-[#B7A0F6] shrink-0" />
             <p className="text-[11px] text-[#2A2352] leading-relaxed">
-              Лимит обновится в полночь — можно будет продолжить обучение в своём ритме 🌙
+              {t("Лимит обновится в полночь — можно будет продолжить обучение в своём ритме 🌙")}
             </p>
           </div>
 
@@ -61,7 +64,7 @@ export function DailyLimitModal({
               onClick={onClose}
               className="w-full text-xs font-semibold h-12 rounded-2xl"
             >
-              Хорошо, до завтра 👋
+              {t("Хорошо, до завтра 👋")}
             </Button>
             {onSecondary && (
               <button
@@ -69,7 +72,7 @@ export function DailyLimitModal({
                 onClick={onSecondary}
                 className="w-full text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors"
               >
-                {secondaryLabel || "Продолжить без ИИ"}
+                {secondaryLabel || t("Продолжить без ИИ")}
               </button>
             )}
           </div>

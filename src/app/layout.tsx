@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TelegramScript } from "@/components/telegram-script";
 import { AuthProvider } from "@/context/auth-context";
+import { I18nProvider } from "@/context/i18n-context";
 
 export const metadata: Metadata = {
   title: "AI Language Trainer",
@@ -28,7 +29,9 @@ export default function RootLayout({
         <TelegramScript />
       </head>
       <body className="min-h-screen bg-[#F4EFFE] text-[#2A2352] antialiased selection:bg-[#B7A0F6] selection:text-[#2A2352]">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </AuthProvider>
       </body>
     </html>
   );

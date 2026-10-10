@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
+import { useI18n } from "@/context/i18n-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +78,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   const router = useRouter();
   const { token, isLoading: isAuthLoading } = useAuth();
+  const { t } = useI18n();
 
   const [deckTitle, setDeckTitle] = useState<string>("");
   const [targetLanguage, setTargetLanguage] = useState<string>("узбекский");
@@ -140,10 +142,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Не удалось загрузить карточки");
+        throw new Error(data.error || t("Не удалось загрузить карточки"));
       }
 
-      setDeckTitle(data.deck?.title || "Колода");
+      setDeckTitle(data.deck?.title || t("Колода"));
       setTargetLanguage(data.deck?.target_language || "узбекский");
       // Enforce training session limit: max 20 cards per session
       setCards((data.cards || []).slice(0, 20));
@@ -154,7 +156,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       setIsCorrectResult(false);
       setUserAnswer("");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ошибка загрузки карточек";
+      const msg = err instanceof Error ? err.message : t("Ошибка загрузки карточек");
       setError(msg);
     } finally {
       setIsLoading(false);
@@ -284,11 +286,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             }
           }
         } else {
-          setError("Не удалось распознать речь. Попробуйте напечатать ответ.");
+          setError(t("Не удалось распознать речь. Попробуйте напечатать ответ."));
         }
       } catch (sttErr) {
         console.error("Transcription error:", sttErr);
-        setError("Ошибка распознавания речи. Введите ответ текстом.");
+        setError(t("Ошибка распознавания речи. Введите ответ текстом."));
       } finally {
         setIsTranscribing(false);
       }
@@ -365,7 +367,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
         <div className="flex items-center justify-center space-x-2">
           <div className="h-2.5 w-2.5 rounded-full bg-[#B7A0F6] animate-ping" />
-          <p className="text-xs font-medium text-[#7B6FA6]">Загрузка карточек...</p>
+          <p className="text-xs font-medium text-[#7B6FA6]">{t("Загрузка карточек...")}</p>
         </div>
         <Skeleton className="h-48 w-full rounded-2xl" />
         <Skeleton className="h-12 w-full rounded-2xl" />
@@ -378,10 +380,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
         <Card className="border-[#F9D7DD] bg-[#FFF1F3]">
           <CardContent className="p-6 text-center space-y-3">
-            <p className="text-sm font-semibold text-[#A63A4B]">Ошибка</p>
+            <p className="text-sm font-semibold text-[#A63A4B]">{t("Ошибка")}</p>
             <p className="text-xs text-[#7B6FA6]">{error}</p>
             <Button variant="outline" size="sm" onClick={() => router.push("/")}>
-              Вернуться на главную
+              {t("Вернуться на главную")}
             </Button>
           </CardContent>
         </Card>
@@ -394,10 +396,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
         <Card className="border-[#DCD0F5] bg-white p-6 text-center space-y-3">
           <CheckCircle2 className="h-10 w-10 text-[#1D6B5B] mx-auto opacity-70" />
-          <h2 className="text-base font-semibold text-[#2A2352]">Карточки не найдены</h2>
-          <p className="text-xs text-[#7B6FA6]">В этой колоде пока нет карточек для тренировки.</p>
+          <h2 className="text-base font-semibold text-[#2A2352]">{t("Карточки не найдены")}</h2>
+          <p className="text-xs text-[#7B6FA6]">{t("В этой колоде пока нет карточек для тренировки.")}</p>
           <Button variant="outline" size="sm" onClick={() => router.push("/")}>
-            Вернуться на главную
+            {t("Вернуться на главную")}
           </Button>
         </Card>
       </main>
@@ -413,13 +415,13 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             <CheckCircle2 className="h-8 w-8 text-[#1D6B5B]" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-[#2A2352]">Тренировка завершена!</h2>
+            <h2 className="text-lg font-semibold text-[#2A2352]">{t("Тренировка завершена!")}</h2>
             <p className="text-xs text-[#7B6FA6] leading-relaxed">
-              Повторено карточек: {reviewedCount}. Все интервалы повторения пересчитаны по алгоритму SM-2.
+              {t("Повторено карточек: {n}. Все интервалы повторения пересчитаны по алгоритму SM-2.", { n: reviewedCount })}
             </p>
             {sessionLevel !== null && (
               <p className="text-xs text-[#2A2352] font-medium pt-1">
-                Уровень владения: {sessionLevel}/10
+                {t("Уровень владения: {n}/10", { n: sessionLevel })}
               </p>
             )}
           </div>
@@ -429,7 +431,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               className="w-full text-xs font-semibold"
               onClick={() => router.push("/")}
             >
-              Вернуться в хаб
+              {t("Вернуться в хаб")}
             </Button>
             <Button
               variant="outline"
@@ -438,7 +440,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               onClick={loadDeckCards}
             >
               <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              Повторить ещё раз
+              {t("Повторить ещё раз")}
             </Button>
           </div>
         </Card>
@@ -457,7 +459,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         kind="voice"
         onClose={() => setShowDailyLimit(false)}
         onSecondary={() => setShowDailyLimit(false)}
-        secondaryLabel="Продолжить без голоса"
+        secondaryLabel={t("Продолжить без голоса")}
       />
 
       <PaywallModal
@@ -474,10 +476,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             className="flex items-center gap-1 text-xs text-[#7B6FA6] hover:text-[#2A2352] transition-colors -ml-1 p-1"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>В хаб</span>
+            <span>{t("В хаб")}</span>
           </button>
           <span className="text-xs font-medium text-[#7B6FA6]">
-            {currentIndex + 1} из {cards.length}
+            {t("{i} из {n}", { i: currentIndex + 1, n: cards.length })}
           </span>
         </div>
 
@@ -491,7 +493,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
         <div>
           <p className="text-[11px] uppercase tracking-wider text-[#7B6FA6] font-medium">
-            Колода
+            {t("Колода")}
           </p>
           <h1 className="text-base font-semibold text-[#2A2352] truncate">
             {deckTitle}
@@ -505,7 +507,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
           {/* Question */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-medium text-[#7B6FA6] uppercase tracking-wider">
-              Задание
+              {t("Задание")}
             </span>
             <p className="text-xl font-medium text-[#2A2352] leading-snug">
               {currentCard.front}
@@ -517,17 +519,17 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             <div className="pt-3 border-t border-[#EFE9FC] space-y-3 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-medium uppercase tracking-wider text-[#7B6FA6]">
-                  Результат
+                  {t("Результат")}
                 </span>
                 {isCorrectResult ? (
                   <Badge variant="default" className="text-[11px] font-medium flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-[#1D6B5B]" />
-                    Верно
+                    {t("Верно")}
                   </Badge>
                 ) : (
                   <Badge variant="peach" className="text-[11px] font-medium flex items-center gap-1">
                     <XCircle className="h-3 w-3 text-[#A63A4B]" />
-                    Есть ошибка
+                    {t("Есть ошибка")}
                   </Badge>
                 )}
               </div>
@@ -535,7 +537,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               {/* Expected answer */}
               <div className="space-y-1">
                 <span className="text-[11px] font-medium text-[#1D6B5B] uppercase tracking-wider">
-                  Правильный ответ
+                  {t("Правильный ответ")}
                 </span>
                 <p className="text-lg font-semibold text-[#1D6B5B]">
                   {currentCard.back}
@@ -545,7 +547,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               {/* User answer if wrong */}
               {!isCorrectResult && userAnswer.trim() && (
                 <div className="text-xs text-[#7B6FA6] pt-0.5">
-                  Ваш ответ: <span className="text-[#A63A4B] font-medium line-through">{userAnswer}</span>
+                  {t("Ваш ответ:")} <span className="text-[#A63A4B] font-medium line-through">{userAnswer}</span>
                 </div>
               )}
 
@@ -554,7 +556,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
                 <div className="p-3.5 rounded-xl bg-[#F2ECFC] border border-[#DCD0F5] space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-medium text-[#2A2352]">
                     <Lightbulb className="h-3.5 w-3.5 text-[#B7A0F6]" />
-                    <span>Грамматическое правило</span>
+                    <span>{t("Грамматическое правило")}</span>
                   </div>
                   <p className="text-xs text-[#2A2352] leading-relaxed">
                     {currentCard.rule_description}
@@ -570,11 +572,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               <div className="p-4 rounded-2xl bg-[#FFF1F3] border border-[#F9D7DD] space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[#A63A4B]">
                   <AlertTriangle className="h-4 w-4 text-[#E06B7B]" />
-                  <span>Текст не совпал с карточкой</span>
+                  <span>{t("Текст не совпал с карточкой")}</span>
                 </div>
                 <p className="text-xs text-[#2A2352] leading-relaxed">
-                  Распознано: <span className="font-semibold text-[#A63A4B]">«{userAnswer}»</span>.
-                  Возможно, микрофон срезал звук или была опечатка. Вы можете наговорить ответ еще раз.
+                  {t("Распознано:")} <span className="font-semibold text-[#A63A4B]">«{userAnswer}»</span>.{" "}
+                  {t("Возможно, микрофон срезал звук или была опечатка. Вы можете наговорить ответ еще раз.")}
                 </p>
               </div>
             </div>
@@ -586,11 +588,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               <div className="p-4 rounded-2xl bg-[#F2ECFC] border border-[#DCD0F5] space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[#2A2352]">
                   <AlertTriangle className="h-4 w-4 text-[#B7A0F6]" />
-                  <span>Ручная корректировка (Микрофон заблокирован)</span>
+                  <span>{t("Ручная корректировка (Микрофон заблокирован)")}</span>
                 </div>
                 <p className="text-xs text-[#7B6FA6] leading-relaxed">
-                  Мы услышали: <span className="font-semibold text-[#2A2352]">«{userAnswer}»</span>.
-                  Подправьте пару букв в поле ввода ниже или подтвердите ответ как есть.
+                  {t("Мы услышали:")} <span className="font-semibold text-[#2A2352]">«{userAnswer}»</span>.{" "}
+                  {t("Подправьте пару букв в поле ввода ниже или подтвердите ответ как есть.")}
                 </p>
               </div>
             </div>
@@ -601,7 +603,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       {/* Mic error notice if any */}
       {(micError || permissionDenied) && (
         <div className="text-xs text-[#A63A4B] bg-[#FFF1F3] border border-[#F9D7DD] p-3 rounded-xl">
-          {micError}
+          {micError && t(micError)}
         </div>
       )}
 
@@ -610,7 +612,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         <div className="flex items-center justify-center gap-2 p-3 bg-[#FFECF0] border border-[#F9D7DD] rounded-2xl animate-pulse">
           <div className="h-2.5 w-2.5 rounded-full bg-[#E06B7B]" />
           <p className="text-xs font-medium text-[#A63A4B]">
-            Идет запись голоса... Нажмите кнопку для остановки
+            {t("Идет запись голоса... Нажмите кнопку для остановки")}
           </p>
         </div>
       )}
@@ -620,7 +622,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         <div className="flex items-center justify-center gap-2 p-3 bg-[#F2ECFC] border border-[#DCD0F5] rounded-2xl">
           <Loader2 className="h-3.5 w-3.5 text-[#B7A0F6] animate-spin" />
           <p className="text-xs font-medium text-[#7B6FA6]">
-            Распознаем речь (Gemini)...
+            {t("Распознаем речь (Gemini)...")}
           </p>
         </div>
       )}
@@ -637,10 +639,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-1 gap-2">
               <label className="text-xs font-medium text-[#7B6FA6] whitespace-nowrap">
-                Ваш перевод или ответ:
+                {t("Ваш перевод или ответ:")}
               </label>
               <span className="text-[10px] text-[#7B6FA6] text-right">
-                можно писать латиницей или кириллицей
+                {t("можно писать латиницей или кириллицей")}
               </span>
             </div>
             <div className="flex gap-2">
@@ -648,7 +650,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
                 ref={inputRef}
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Введите ответ на изучаемом языке..."
+                placeholder={t("Введите ответ на изучаемом языке...")}
                 autoFocus
                 disabled={isRecording || isTranscribing}
                 className="text-sm flex-1"
@@ -662,10 +664,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
                 className="shrink-0 h-12 w-12 rounded-2xl relative"
                 title={
                   voiceAttempts >= 2
-                    ? "Голосовые попытки исчерпаны"
+                    ? t("Голосовые попытки исчерпаны")
                     : isRecording
-                    ? "Остановить запись"
-                    : "Голосовой ответ"
+                    ? t("Остановить запись")
+                    : t("Голосовой ответ")
                 }
               >
                 {isRecording ? (
@@ -684,7 +686,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             disabled={!userAnswer.trim() || isRecording || isTranscribing}
             className="w-full text-sm font-semibold flex items-center justify-center gap-2"
           >
-            <span>Проверить ответ</span>
+            <span>{t("Проверить ответ")}</span>
             <Send className="h-4 w-4" />
           </Button>
         </form>
@@ -708,12 +710,12 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             {isRecording ? (
               <>
                 <Square className="h-4 w-4 text-[#A63A4B] fill-current" />
-                <span>Остановить запись</span>
+                <span>{t("Остановить запись")}</span>
               </>
             ) : (
               <>
                 <Mic className="h-4 w-4" />
-                <span>Попробовать сказать еще раз (1/1)</span>
+                <span>{t("Попробовать сказать еще раз (1/1)")}</span>
               </>
             )}
           </Button>
@@ -729,7 +731,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             }}
             className="w-full text-xs text-[#7B6FA6]"
           >
-            Ввести ответ текстом
+            {t("Ввести ответ текстом")}
           </Button>
         </div>
       )}
@@ -739,13 +741,13 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         <div className="space-y-3 mt-auto pt-2 animate-in fade-in duration-200">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-[#7B6FA6] px-1">
-              Отредактируйте распознанный текст:
+              {t("Отредактируйте распознанный текст:")}
             </label>
             <Input
               ref={inputRef}
               value={userAnswer}
               onChange={(e) => setUserAnswer(e.target.value)}
-              placeholder="Исправьте текст..."
+              placeholder={t("Исправьте текст...")}
               autoFocus
               className="text-sm w-full"
             />
@@ -761,7 +763,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               className="text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-1.5"
             >
               <Check className="h-4 w-4" />
-              <span>Проверить исправленный текст</span>
+              <span>{t("Проверить исправленный текст")}</span>
             </Button>
 
             <Button
@@ -771,7 +773,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               onClick={handleConfirmAsMyAnswer}
               className="text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-1.5"
             >
-              <span>Да, это мой ответ</span>
+              <span>{t("Да, это мой ответ")}</span>
             </Button>
           </div>
         </div>
@@ -781,7 +783,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       {viewMode === "evaluated" && (
         <div className="space-y-2.5 mt-auto pt-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <p className="text-xs font-medium text-center text-[#7B6FA6]">
-            Оцените, насколько легко было вспомнить:
+            {t("Оцените, насколько легко было вспомнить:")}
           </p>
           <div className="grid grid-cols-4 gap-2">
             {/* Again (1) */}
@@ -792,8 +794,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               onClick={() => handleGrade(1)}
               className="flex flex-col h-16 py-2 px-1 rounded-xl"
             >
-              <span className="text-xs font-semibold">Снова</span>
-              <span className="text-[10px] opacity-80 font-normal">Забыл</span>
+              <span className="text-xs font-semibold">{t("Снова")}</span>
+              <span className="text-[10px] opacity-80 font-normal">{t("Забыл")}</span>
             </Button>
 
             {/* Hard (2) */}
@@ -804,8 +806,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               onClick={() => handleGrade(2)}
               className="flex flex-col h-16 py-2 px-1 rounded-xl"
             >
-              <span className="text-xs font-semibold">Трудно</span>
-              <span className="text-[10px] text-[#7B6FA6] font-normal">С трудом</span>
+              <span className="text-xs font-semibold">{t("Трудно")}</span>
+              <span className="text-[10px] text-[#7B6FA6] font-normal">{t("С трудом")}</span>
             </Button>
 
             {/* Good (3) */}
@@ -816,8 +818,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               onClick={() => handleGrade(3)}
               className="flex flex-col h-16 py-2 px-1 rounded-xl"
             >
-              <span className="text-xs font-semibold">Хорошо</span>
-              <span className="text-[10px] text-[#2A2352] opacity-80 font-normal">Нормально</span>
+              <span className="text-xs font-semibold">{t("Хорошо")}</span>
+              <span className="text-[10px] text-[#2A2352] opacity-80 font-normal">{t("Нормально")}</span>
             </Button>
 
             {/* Easy (4) */}
@@ -828,8 +830,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               onClick={() => handleGrade(4)}
               className="flex flex-col h-16 py-2 px-1 rounded-xl"
             >
-              <span className="text-xs font-semibold">Легко</span>
-              <span className="text-[10px] text-[#1D6B5B] opacity-80 font-normal">Сразу</span>
+              <span className="text-xs font-semibold">{t("Легко")}</span>
+              <span className="text-[10px] text-[#1D6B5B] opacity-80 font-normal">{t("Сразу")}</span>
             </Button>
           </div>
         </div>

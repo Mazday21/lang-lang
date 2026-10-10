@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
+import { useI18n } from "@/context/i18n-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import { PlacementTestModal, PlacementMode } from "@/components/placement-test-m
 
 export default function HubPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const {
     user,
     token,
@@ -148,7 +150,7 @@ export default function HubPage() {
           });
         }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Ошибка загрузки";
+        const msg = err instanceof Error ? err.message : t("Ошибка загрузки");
         setError(msg);
       } finally {
         setIsLoadingDecks(false);
@@ -289,9 +291,9 @@ export default function HubPage() {
   const cardsWord = (n: number) => {
     const mod10 = n % 10;
     const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return "карточка";
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "карточки";
-    return "карточек";
+    if (mod10 === 1 && mod100 !== 11) return t("карточка");
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return t("карточки");
+    return t("карточек");
   };
 
   // Check if first-time onboarding should be displayed
@@ -311,7 +313,7 @@ export default function HubPage() {
       <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
         <div className="flex items-center justify-center space-x-2">
           <div className="h-2.5 w-2.5 rounded-full bg-[#B9EBDD] animate-ping" />
-          <p className="text-xs font-medium text-[#7B6FA6]">Загрузка профиля...</p>
+          <p className="text-xs font-medium text-[#7B6FA6]">{t("Загрузка профиля...")}</p>
         </div>
         <Skeleton className="h-28 w-full rounded-2xl" />
         <Skeleton className="h-32 w-full rounded-2xl" />
@@ -384,10 +386,10 @@ export default function HubPage() {
       <header className="flex items-center justify-between pb-2 border-b border-[#DCD0F5]">
         <div>
           <p className="text-xs font-medium text-[#7B6FA6] tracking-wide uppercase">
-            Тренажер языков • SM-2
+            {t("Тренажер языков • SM-2")}
           </p>
           <h1 className="text-xl font-semibold text-[#2A2352] mt-0.5">
-            {user?.first_name ? `Привет, ${user.first_name}` : "Личный тренажер"}
+            {user?.first_name ? t("Привет, ") + user.first_name : t("Личный тренажер")}
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -396,7 +398,7 @@ export default function HubPage() {
             onClick={() => setIsLanguageSwitcherOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#DCD0F5] hover:border-[#B7A0F6] active:scale-95 text-xs font-semibold text-[#2A2352] transition-all shadow-none whitespace-nowrap shrink-0"
             style={{ whiteSpace: "nowrap" }}
-            title="Сменить язык обучения"
+            title={t("Сменить язык обучения")}
           >
             <span className="whitespace-nowrap font-bold tracking-wide">{pairLabel}</span>
             <ChevronDown className="h-3.5 w-3.5 text-[#7B6FA6] shrink-0" />
@@ -407,7 +409,7 @@ export default function HubPage() {
             size="icon"
             onClick={() => router.push("/settings")}
             className="h-9 w-9 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6]"
-            title="Настройки"
+            title={t("Настройки")}
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -420,10 +422,10 @@ export default function HubPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <Terminal className="h-4 w-4 text-[#7B6FA6]" />
-              Локальная разработка
+              {t("Локальная разработка")}
             </CardTitle>
             <CardDescription className="text-xs">
-              Запустите тестовую сессию для эмуляции пользователя.
+              {t("Запустите тестовую сессию для эмуляции пользователя.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
@@ -433,7 +435,7 @@ export default function HubPage() {
               size="sm"
               className="w-full text-xs"
             >
-              Включить Dev-пользователя
+              {t("Включить Dev-пользователя")}
             </Button>
           </CardContent>
         </Card>
@@ -443,34 +445,43 @@ export default function HubPage() {
       <Card className="border-[#DCD0F5] bg-white shadow-none">
         <CardContent className="p-5 flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-xs text-[#7B6FA6] font-medium">Повторение на сегодня</p>
+            <p className="text-xs text-[#7B6FA6] font-medium">{t("Повторение на сегодня")}</p>
             <p className="text-2xl font-semibold text-[#2A2352]">
               {isLoadingDecks
                 ? "..."
                 : remainingToday > 0
                 ? `${remainingToday} ${cardsWord(remainingToday)}`
                 : totalDue > 0
-                ? "План выполнен!"
-                : "Всё повторено!"}
+                ? t("План выполнен!")
+                : t("Всё повторено!")}
             </p>
             {!isLoadingDecks && totalDue > 0 && (
               <p className="text-[11px] text-[#7B6FA6]">
                 {remainingToday > 0
-                  ? `Ещё ${totalDue - remainingToday} можно повторить позже`
-                  : `Ещё ${totalDue} ${cardsWord(totalDue)} — повторите позже или завтра`}
+                  ? t("Ещё {count} можно повторить позже", {
+                      count: totalDue - remainingToday,
+                    })
+                  : t("Ещё {count} {word} — повторите позже или завтра", {
+                      count: totalDue,
+                      word: cardsWord(totalDue),
+                    })}
               </p>
             )}
             <div className="flex items-center gap-2 pt-0.5 flex-wrap">
               <span className="text-xs text-[#7B6FA6] flex items-center gap-1 whitespace-nowrap">
                 <Gauge className="h-3 w-3 text-[#B7A0F6]" />
-                Уровень владения:{" "}
+                {t("Уровень владения:")}{" "}
                 {progress
-                  ? `${progress.proficiency_level}/10 · ${proficiencyLabel(progress.proficiency_level)}`
+                  ? `${progress.proficiency_level}/10 · ${t(
+                      proficiencyLabel(progress.proficiency_level)
+                    )}`
                   : "—"}
                 {progress && progress.proficiency_level > progress.base_level && (
                   <span className="text-[#1D6B5B]">
                     {" "}
-                    (+{progress.proficiency_level - progress.base_level} за обучение)
+                    {t("(+{n} за обучение)", {
+                      n: progress.proficiency_level - progress.base_level,
+                    })}
                   </span>
                 )}
               </span>
@@ -479,7 +490,7 @@ export default function HubPage() {
                 onClick={() => setIsTestOpen(true)}
                 className="text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors"
               >
-                {progress?.placement_tested ? "Пройти заново" : "Пройти тест"}
+                {progress?.placement_tested ? t("Пройти заново") : t("Пройти тест")}
               </button>
             </div>
           </div>
@@ -498,7 +509,7 @@ export default function HubPage() {
           className="w-full text-sm font-semibold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0]"
         >
           <Sparkles className="h-4 w-4" />
-          <span>Сгенерировать колоду с помощью AI</span>
+          <span>{t("Сгенерировать колоду с помощью AI")}</span>
         </Button>
       ) : (
         <Button
@@ -511,7 +522,7 @@ export default function HubPage() {
           className="w-full text-sm font-bold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-gradient-to-r from-[#B7A0F6] to-[#9FE2CE] text-[#2A2352] hover:opacity-90"
         >
           <Sparkles className="h-4 w-4" />
-          <span>Попробовать ИИ-суперсилы</span>
+          <span>{t("Попробовать ИИ-суперсилы")}</span>
           <ChevronRight className="h-4 w-4" />
         </Button>
       )}
@@ -520,7 +531,7 @@ export default function HubPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-sm font-semibold text-[#2A2352]">
-            Колоды для изучения ({pairLabel})
+            {t("Колоды для изучения ({pair})", { pair: pairLabel })}
           </h2>
           <button
             onClick={() => fetchDecksAndLimits()}
@@ -528,7 +539,7 @@ export default function HubPage() {
             className="text-xs text-[#7B6FA6] hover:text-[#2A2352] flex items-center gap-1 transition-colors"
           >
             <RefreshCw className={`h-3 w-3 ${isLoadingDecks ? "animate-spin" : ""}`} />
-            Обновить
+            {t("Обновить")}
           </button>
         </div>
 
@@ -542,7 +553,7 @@ export default function HubPage() {
                 onClick={() => fetchDecksAndLimits()}
                 className="mt-2 block w-full text-xs"
               >
-                Повторить попытку
+                {t("Повторить попытку")}
               </Button>
             </CardContent>
           </Card>
@@ -561,10 +572,12 @@ export default function HubPage() {
             </div>
             <div className="space-y-1.5">
               <h3 className="text-base font-semibold text-[#2A2352]">
-                У вас пока нет колод для этой языковой пары
+                {t("У вас пока нет колод для этой языковой пары")}
               </h3>
               <p className="text-xs text-[#7B6FA6] leading-relaxed max-w-xs mx-auto">
-                Давайте создадим первую с помощью ИИ! Назовите любую тему — от приветствий до покупок.
+                {t(
+                  "Давайте создадим первую с помощью ИИ! Назовите любую тему — от приветствий до покупок."
+                )}
               </p>
             </div>
             <div className="pt-2">
@@ -576,7 +589,7 @@ export default function HubPage() {
                   className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>Создать колоду ({pairLabel})</span>
+                  <span>{t("Создать колоду ({pair})", { pair: pairLabel })}</span>
                 </Button>
               ) : (
                 <Button
@@ -589,7 +602,7 @@ export default function HubPage() {
                   className="w-full text-xs font-bold h-12 rounded-2xl flex items-center justify-center gap-2 bg-gradient-to-r from-[#B7A0F6] to-[#9FE2CE] text-[#2A2352] hover:opacity-90"
                 >
                   <Sparkles className="h-4 w-4" />
-                  <span>Попробовать ИИ-суперсилы</span>
+                  <span>{t("Попробовать ИИ-суперсилы")}</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               )}
@@ -601,19 +614,22 @@ export default function HubPage() {
               <div key={level} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider whitespace-nowrap">
-                    Уровень {level} · {levelName(level)}
+                    {t("Уровень {level} · {name}", {
+                      level,
+                      name: t(levelName(level)),
+                    })}
                   </span>
                   {level === recommendedLevel && (
                     <Badge
                       variant="outline"
                       className="text-[10px] py-0 px-1.5 font-normal text-[#1D6B5B] border-[#B9EBDD] bg-[#E3F7EF] whitespace-nowrap"
                     >
-                      Рекомендуем
+                      {t("Рекомендуем")}
                     </Badge>
                   )}
                   <div className="flex-1 h-px bg-[#DCD0F5]" />
                   <span className="text-[11px] text-[#7B6FA6] whitespace-nowrap">
-                    {decksByLevel[level].length} колод
+                    {decksByLevel[level].length} {t("колод")}
                   </span>
                 </div>
                 {decksByLevel[level].map((deck) => {
@@ -634,7 +650,10 @@ export default function HubPage() {
                           variant="outline"
                           className="text-[10px] py-0 px-1.5 font-normal text-[#2A2352] border-[#B7A0F6] bg-[#F0EAFB] whitespace-nowrap"
                         >
-                          Уровень {deck.level || 1} · {levelName(deck.level || 1)}
+                          {t("Уровень {level} · {name}", {
+                            level: deck.level || 1,
+                            name: t(levelName(deck.level || 1)),
+                          })}
                         </Badge>
                       </div>
                       {deck.description && (
@@ -645,16 +664,16 @@ export default function HubPage() {
                       <div className="pt-1 flex items-center gap-2">
                         {hasDue ? (
                           <Badge variant="default" className="text-[11px] font-medium">
-                            {deck.due_cards} к повторению
+                            {deck.due_cards} {t("к повторению")}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-[11px] text-[#7B6FA6] flex items-center gap-1">
                             <CheckCircle2 className="h-3 w-3 text-[#1D6B5B]" />
-                            Все {deck.total_cards} слов повторены
+                            {t("Все {n} слов повторены", { n: deck.total_cards })}
                           </Badge>
                         )}
                         <span className="text-[11px] text-[#7B6FA6]">
-                          Всего: {deck.total_cards}
+                          {t("Всего:")} {deck.total_cards}
                         </span>
                       </div>
                     </div>
@@ -667,7 +686,7 @@ export default function HubPage() {
                           handleDeleteDeck(deck.id);
                         }}
                         className="h-8 w-8 rounded-xl hover:bg-[#FFECF0] text-[#7B6FA6] hover:text-[#A63A4B] transition-colors flex items-center justify-center opacity-70 hover:opacity-100"
-                        title="Удалить колоду"
+                        title={t("Удалить колоду")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

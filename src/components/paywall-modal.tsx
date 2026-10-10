@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Check, ArrowLeft, RefreshCw, Loader2, ExternalLink } from "lucide-react";
+import { useI18n } from "@/context/i18n-context";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface PaywallModalProps {
 
 export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "trial" }: PaywallModalProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null);
 
@@ -25,22 +27,25 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
 
   const content = {
     generator: {
-      badge: "ИИ-генератор",
-      title: "ИИ-генератор колод — в подписке Pro",
-      description:
-        "Чтобы создавать персональные колоды с помощью ИИ, оформите подписку. Обучение, голосовые проверки и стартовые колоды остаются бесплатными.",
+      badge: t("ИИ-генератор"),
+      title: t("ИИ-генератор колод — в подписке Pro"),
+      description: t(
+        "Чтобы создавать персональные колоды с помощью ИИ, оформите подписку. Обучение, голосовые проверки и стартовые колоды остаются бесплатными."
+      ),
     },
     trial: {
-      badge: "Пробный лимит",
-      title: "Бесплатные AI-проверки закончились",
-      description:
-        "Вы использовали 5 пробных AI-проверок на аккаунт. Оформите Pro — и продолжайте учиться без ограничений.",
+      badge: t("Пробный лимит"),
+      title: t("Бесплатные AI-проверки закончились"),
+      description: t(
+        "Вы использовали 5 пробных AI-проверок на аккаунт. Оформите Pro — и продолжайте учиться без ограничений."
+      ),
     },
     upsell: {
-      badge: "ИИ-суперсилы",
-      title: "Откройте ИИ-суперсилы Pro",
-      description:
-        "Генерация колод по любой теме, 60 голосовых проверок в день и умные закрепляющие колоды под ваши слабые места.",
+      badge: t("ИИ-суперсилы"),
+      title: t("Откройте ИИ-суперсилы Pro"),
+      description: t(
+        "Генерация колод по любой теме, 60 голосовых проверок в день и умные закрепляющие колоды под ваши слабые места."
+      ),
     },
   }[mode];
 
@@ -60,7 +65,7 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
 
       const data = await res.json();
       if (data.success && data.checkout_url) {
-        setCheckoutNotice("Переход к оплате подписки Pro...");
+        setCheckoutNotice(t("Переход к оплате подписки Pro..."));
 
         // Use Telegram WebApp openLink or window.open
         const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
@@ -72,7 +77,7 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
       }
     } catch (err) {
       console.error("Checkout error:", err);
-      setCheckoutNotice("Не удалось инициировать оплату. Попробуйте позже.");
+      setCheckoutNotice(t("Не удалось инициировать оплату. Попробуйте позже."));
     } finally {
       setIsProcessing(false);
     }
@@ -114,7 +119,7 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
               type="button"
               onClick={onClose}
               className="absolute right-3 top-3 h-8 w-8 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6] flex items-center justify-center"
-              title="Закрыть"
+              title={t("Закрыть")}
             >
               ✕
             </button>
@@ -126,24 +131,24 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
           <div className="p-4 rounded-2xl bg-white border border-[#DCD0F5] space-y-2.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#2A2352]">
               <span className="text-[#B9EBDD] font-bold">●</span>
-              <span>Возможности тарифа Pro:</span>
+              <span>{t("Возможности тарифа Pro:")}</span>
             </div>
             <ul className="text-xs text-[#2A2352] space-y-2">
               <li className="flex items-start gap-2">
                 <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-                <span>Создание персональных колод по любой теме с помощью ИИ</span>
+                <span>{t("Создание персональных колод по любой теме с помощью ИИ")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-                <span>60 голосовых проверок в день с умным распознаванием речи</span>
+                <span>{t("60 голосовых проверок в день с умным распознаванием речи")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-                <span>Умные закрепляющие колоды под ваши слабые места</span>
+                <span>{t("Умные закрепляющие колоды под ваши слабые места")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-                <span>Новые функции и обновления — первыми</span>
+                <span>{t("Новые функции и обновления — первыми")}</span>
               </li>
             </ul>
           </div>
@@ -167,7 +172,7 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <span>Подписка Pro — 39 000 UZS / ⭐️ 150 Stars</span>
+                  <span>{t("Подписка Pro — 39 000 UZS / ⭐️ 150 Stars")}</span>
                   <ExternalLink className="h-3.5 w-3.5 opacity-70" />
                 </>
               )}
@@ -183,7 +188,7 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
               className="w-full text-xs h-11 rounded-2xl flex items-center justify-center gap-1.5"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Вернуться в Хаб</span>
+              <span>{t("Вернуться в Хаб")}</span>
             </Button>
 
             {/* Dev reset shortcut */}
@@ -192,7 +197,7 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
               className="w-full text-[11px] text-[#7B6FA6] hover:text-[#2A2352] flex items-center justify-center gap-1 pt-1 underline transition-colors"
             >
               <RefreshCw className="h-3 w-3" />
-              <span>Сбросить лимит (Тест для разработки)</span>
+              <span>{t("Сбросить лимит (Тест для разработки)")}</span>
             </button>
           </div>
         </CardContent>

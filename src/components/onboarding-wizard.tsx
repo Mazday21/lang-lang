@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/context/i18n-context";
 import { Sparkles, ArrowRight, ArrowLeft, Check, Globe } from "lucide-react";
 
 interface OnboardingWizardProps {
@@ -11,6 +12,7 @@ interface OnboardingWizardProps {
 }
 
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+  const { t } = useI18n();
   const [step, setStep] = useState<1 | 2>(1);
   const [nativeLanguage, setNativeLanguage] = useState<string>("ru");
   const [targetLanguage, setTargetLanguage] = useState<string>("uz");
@@ -90,12 +92,14 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#B7A0F6]/30 text-[#2A2352] text-xs font-medium">
             <Globe className="h-3.5 w-3.5 text-[#2A2352]" />
             <span>
-              {step === 1 ? "Шаг 1 из 2 • Ona tili" : "Шаг 2 из 2 • O'rganish tili"}
+              {step === 1
+                ? t("Шаг {i} из 2 • {name}", { i: 1, name: t("Ona tili") })
+                : t("Шаг {i} из 2 • {name}", { i: 2, name: t("O'rganish tili") })}
             </span>
           </div>
 
           <h1 className="text-2xl font-bold text-[#2A2352] tracking-tight">
-            {step === 1 ? "Выберите родной язык" : "Какой язык хотите изучать?"}
+            {step === 1 ? t("Выберите родной язык") : t("Какой язык хотите изучать?")}
           </h1>
 
           <p className="text-xs text-[#7B6FA6] max-w-xs mx-auto leading-relaxed">
@@ -123,8 +127,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     RU
                   </span>
                   <div>
-                    <h3 className="text-sm font-semibold text-[#2A2352]">Русский язык</h3>
-                    <p className="text-xs text-[#7B6FA6]">Пояснения и правила будут на русском</p>
+                    <h3 className="text-sm font-semibold text-[#2A2352]">{t("Русский язык")}</h3>
+                    <p className="text-xs text-[#7B6FA6]">{t("Пояснения и правила будут на русском")}</p>
                   </div>
                 </div>
                 {nativeLanguage === "ru" && (
@@ -168,7 +172,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               size="lg"
               className="w-full text-sm font-semibold h-13 rounded-2xl shadow-none mt-2 flex items-center justify-center gap-2"
             >
-              <span>Далее</span>
+              <span>{t("Далее")}</span>
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -193,8 +197,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                       {opt.codeBadge}
                     </span>
                     <div>
-                      <h3 className="text-sm font-semibold text-[#2A2352]">{opt.name}</h3>
-                      <p className="text-xs text-[#7B6FA6]">{opt.subtitle}</p>
+                      <h3 className="text-sm font-semibold text-[#2A2352]">{t(opt.name)}</h3>
+                      <p className="text-xs text-[#7B6FA6]">{t(opt.subtitle)}</p>
                     </div>
                   </div>
                   {targetLanguage === opt.code && (
@@ -215,7 +219,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 className="h-13 rounded-2xl px-4 flex items-center justify-center gap-1.5"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span className="text-xs">Назад</span>
+                <span className="text-xs">{t("Назад")}</span>
               </Button>
 
               <Button
@@ -227,7 +231,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               >
                 <Sparkles className="h-4 w-4" />
                 <span>
-                  {isSubmitting ? "Тайёрланмоқда..." : "Начать обучение"}
+                  {isSubmitting ? "Тайёрланмоқда..." : t("Начать обучение")}
                 </span>
               </Button>
             </div>

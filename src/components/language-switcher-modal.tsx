@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/context/i18n-context";
 import { X, Check, Globe } from "lucide-react";
 
 interface LanguageSwitcherModalProps {
@@ -20,6 +21,7 @@ export function LanguageSwitcherModal({
   currentTarget = "uz",
   onSave,
 }: LanguageSwitcherModalProps) {
+  const { t } = useI18n();
   const [nativeLang, setNativeLang] = useState(currentNative);
   const [targetLang, setTargetLang] = useState(currentTarget);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,7 +52,7 @@ export function LanguageSwitcherModal({
   const handleSelectNative = (code: string) => {
     setNativeLang(code);
     const availableTargets = getTargetOptions(code);
-    if (!availableTargets.some((t) => t.code === targetLang)) {
+    if (!availableTargets.some((opt) => opt.code === targetLang)) {
       setTargetLang(availableTargets[0].code);
     }
   };
@@ -83,10 +85,10 @@ export function LanguageSwitcherModal({
           </div>
 
           <CardTitle className="text-base font-semibold text-[#2A2352]">
-            Языковая пара обучения
+            {t("Языковая пара обучения")}
           </CardTitle>
           <CardDescription className="text-xs text-[#7B6FA6]">
-            Выберите ваш родной язык и язык, который хотите изучать
+            {t("Выберите ваш родной язык и язык, который хотите изучать")}
           </CardDescription>
         </CardHeader>
 
@@ -94,7 +96,7 @@ export function LanguageSwitcherModal({
           {/* Native Language Block */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
-              1. Ваш родной язык:
+              {t("1. Ваш родной язык:")}
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -108,7 +110,7 @@ export function LanguageSwitcherModal({
               >
                 <span className="text-xs text-[#2A2352] flex items-center gap-2">
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5] text-[#2A2352]">RU</span>
-                  <span>Русский</span>
+                  <span>{t("Русский")}</span>
                 </span>
                 {nativeLang === "ru" && (
                   <Check className="h-3.5 w-3.5 text-[#1D6B5B]" />
@@ -126,7 +128,7 @@ export function LanguageSwitcherModal({
               >
                 <span className="text-xs text-[#2A2352] flex items-center gap-2">
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5] text-[#2A2352]">UZ</span>
-                  <span>O'zbekcha</span>
+                  <span>{t("O'zbekcha")}</span>
                 </span>
                 {nativeLang === "uz" && (
                   <Check className="h-3.5 w-3.5 text-[#1D6B5B]" />
@@ -138,7 +140,7 @@ export function LanguageSwitcherModal({
           {/* Target Language Block */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
-              2. Язык изучения:
+              {t("2. Язык изучения:")}
             </span>
             <div className="space-y-2">
               {targetOptions.map((opt) => (
@@ -154,7 +156,7 @@ export function LanguageSwitcherModal({
                 >
                   <span className="text-xs text-[#2A2352] flex items-center gap-2">
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5] text-[#2A2352]">{opt.codeBadge}</span>
-                    <span>{opt.name}</span>
+                    <span>{t(opt.name)}</span>
                   </span>
                   {targetLang === opt.code && (
                     <div className="h-5 w-5 rounded-full bg-[#B9EBDD] flex items-center justify-center text-[#1D6B5B]">
@@ -171,7 +173,7 @@ export function LanguageSwitcherModal({
             disabled={isSaving}
             className="w-full text-xs font-semibold h-12 rounded-2xl shadow-none mt-2 bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0]"
           >
-            {isSaving ? "Сохранение..." : "Применить языковую пару"}
+            {isSaving ? t("Сохранение...") : t("Применить языковую пару")}
           </Button>
         </CardContent>
       </Card>

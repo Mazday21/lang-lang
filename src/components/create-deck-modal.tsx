@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/context/i18n-context";
 import { Sparkles, X, Loader2, ArrowRight } from "lucide-react";
 
 interface CreateDeckModalProps {
@@ -24,6 +25,7 @@ export function CreateDeckModal({
   nativeLang = "ru",
   targetLang = "uz",
 }: CreateDeckModalProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const [topic, setTopic] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -91,14 +93,14 @@ export function CreateDeckModal({
       }
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Не удалось сгенерировать колоду");
+        throw new Error(data.error || t("Не удалось сгенерировать колоду"));
       }
 
       // Success: navigate straight to training the new deck
       onClose();
       router.push(`/train/${data.deck_id}`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ошибка генерации";
+      const msg = err instanceof Error ? err.message : t("Ошибка генерации");
       setError(msg);
     } finally {
       setIsGenerating(false);
@@ -122,10 +124,10 @@ export function CreateDeckModal({
           </div>
 
           <CardTitle className="text-lg font-semibold text-[#2A2352]">
-            Создать колоду с помощью ИИ
+            {t("Создать колоду с помощью ИИ")}
           </CardTitle>
           <CardDescription className="text-xs text-[#7B6FA6] leading-relaxed">
-            Укажите любую тему, и репетитор сгенерирует 5–7 карточек с примерами и правилами.
+            {t("Укажите любую тему, и репетитор сгенерирует 5–7 карточек с примерами и правилами.")}
           </CardDescription>
         </CardHeader>
 
@@ -133,7 +135,7 @@ export function CreateDeckModal({
           {/* Quick topic tags */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-medium text-[#7B6FA6] uppercase tracking-wider">
-              Рекомендуемые темы:
+              {t("Рекомендуемые темы:")}
             </span>
             <div className="flex flex-wrap gap-1.5">
               {suggestions.map((item) => (
@@ -146,7 +148,7 @@ export function CreateDeckModal({
                   }}
                   className="text-xs px-2.5 py-1 rounded-xl bg-white border border-[#DCD0F5] text-[#2A2352] hover:border-[#B7A0F6] active:scale-95 transition-all text-left"
                 >
-                  {item}
+                  {t(item)}
                 </button>
               ))}
             </div>
@@ -162,12 +164,12 @@ export function CreateDeckModal({
           >
             <div className="space-y-1">
               <label className="text-xs font-medium text-[#7B6FA6]">
-                Или введите свою тему:
+                {t("Или введите свою тему:")}
               </label>
               <Input
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="например: Разговор в аэропорту, Числительные..."
+                placeholder={t("например: Разговор в аэропорту, Числительные...")}
                 disabled={isGenerating}
                 autoFocus
                 className="text-sm"
@@ -184,7 +186,7 @@ export function CreateDeckModal({
               <div className="p-3 bg-[#F2ECFC] border border-[#DCD0F5] rounded-2xl flex items-center gap-2.5">
                 <Loader2 className="h-4 w-4 text-[#B7A0F6] animate-spin shrink-0" />
                 <p className="text-xs text-[#7B6FA6] leading-relaxed">
-                  ИИ составляет карточки и грамматические пояснения...
+                  {t("ИИ составляет карточки и грамматические пояснения...")}
                 </p>
               </div>
             )}
@@ -199,11 +201,11 @@ export function CreateDeckModal({
               {isGenerating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Генерируем...</span>
+                  <span>{t("Генерируем...")}</span>
                 </>
               ) : (
                 <>
-                  <span>Создать и начать тренировку</span>
+                  <span>{t("Создать и начать тренировку")}</span>
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/context/i18n-context";
 import { Check, X, GraduationCap, ArrowRight, ArrowLeft, Globe } from "lucide-react";
 import {
   getPlacementTest,
@@ -60,6 +61,7 @@ export function PlacementTestModal({
   onClose,
   canClose = true,
 }: PlacementTestModalProps) {
+  const { t } = useI18n();
   const [step, setStep] = useState<Step>("language");
   const [selNative, setSelNative] = useState<string>("ru");
   const [selTarget, setSelTarget] = useState<string>("uz");
@@ -186,9 +188,9 @@ export function PlacementTestModal({
                     <Globe className="h-5 w-5 text-[#2A2352]" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-[#2A2352]">Языки обучения</h2>
+                    <h2 className="text-sm font-semibold text-[#2A2352]">{t("Языки обучения")}</h2>
                     <p className="text-[11px] text-[#7B6FA6]">
-                      Шаг перед мини-тестом на уровень
+                      {t("Шаг перед мини-тестом на уровень")}
                     </p>
                   </div>
                 </div>
@@ -197,7 +199,7 @@ export function PlacementTestModal({
                     type="button"
                     onClick={onClose}
                     className="h-8 w-8 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6] flex items-center justify-center"
-                    title="Закрыть"
+                    title={t("Закрыть")}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -205,14 +207,15 @@ export function PlacementTestModal({
               </div>
 
               <p className="text-xs text-[#7B6FA6] leading-relaxed">
-                Выберите ваш родной язык и язык, который хотите изучать. Тест и колоды
-                будут подобраны именно для этой пары.
+                {t(
+                  "Выберите ваш родной язык и язык, который хотите изучать. Тест и колоды будут подобраны именно для этой пары."
+                )}
               </p>
 
               {/* Native language */}
               <div className="space-y-1.5">
                 <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
-                  1. Родной язык:
+                  {t("1. Родной язык:")}
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   {NATIVE_OPTIONS.map((opt) => (
@@ -230,7 +233,7 @@ export function PlacementTestModal({
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5]">
                           {opt.badge}
                         </span>
-                        <span>{opt.name}</span>
+                        <span>{t(opt.name)}</span>
                       </span>
                       {selNative === opt.code && <Check className="h-3.5 w-3.5 text-[#1D6B5B]" />}
                     </button>
@@ -241,7 +244,7 @@ export function PlacementTestModal({
               {/* Target language */}
               <div className="space-y-1.5">
                 <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
-                  2. Язык изучения:
+                  {t("2. Язык изучения:")}
                 </span>
                 <div className="space-y-2">
                   {getTargetOptions(selNative).map((opt) => (
@@ -262,7 +265,7 @@ export function PlacementTestModal({
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5]">
                           {opt.badge}
                         </span>
-                        <span>{opt.name}</span>
+                        <span>{t(opt.name)}</span>
                       </span>
                       {selTarget === opt.code && <Check className="h-3.5 w-3.5 text-[#1D6B5B]" />}
                     </button>
@@ -275,7 +278,7 @@ export function PlacementTestModal({
                 disabled={isSaving}
                 className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
               >
-                <span>{isSaving ? "Сохраняем..." : "Далее — мини-тест"}</span>
+                <span>{isSaving ? t("Сохраняем...") : t("Далее — мини-тест")}</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
@@ -289,9 +292,9 @@ export function PlacementTestModal({
                     <GraduationCap className="h-5 w-5 text-[#2A2352]" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-[#2A2352]">Мини-тест на уровень</h2>
+                    <h2 className="text-sm font-semibold text-[#2A2352]">{t("Мини-тест на уровень")}</h2>
                     <p className="text-[11px] text-[#7B6FA6]">
-                      Вопрос {qIndex + 1} из {questions.length}
+                      {t("Вопрос {i} из {n}", { i: qIndex + 1, n: questions.length })}
                     </p>
                   </div>
                 </div>
@@ -300,7 +303,7 @@ export function PlacementTestModal({
                     type="button"
                     onClick={onClose}
                     className="h-8 w-8 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6] flex items-center justify-center"
-                    title="Закрыть"
+                    title={t("Закрыть")}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -339,14 +342,14 @@ export function PlacementTestModal({
                   onClick={() => setStep("manual")}
                   className="w-full text-xs font-medium h-10 rounded-2xl"
                 >
-                  Выбрать уровень вручную
+                  {t("Выбрать уровень вручную")}
                 </Button>
                 <button
                   type="button"
                   onClick={handleSkip}
                   className="w-full text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors"
                 >
-                  Пропустить тест
+                  {t("Пропустить тест")}
                 </button>
               </div>
             </div>
@@ -359,14 +362,14 @@ export function PlacementTestModal({
                   <div className="h-9 w-9 rounded-2xl bg-[#EFE9FC] flex items-center justify-center">
                     <GraduationCap className="h-5 w-5 text-[#2A2352]" />
                   </div>
-                  <h2 className="text-sm font-semibold text-[#2A2352]">Уровень владения</h2>
+                  <h2 className="text-sm font-semibold text-[#2A2352]">{t("Уровень владения")}</h2>
                 </div>
                 {canClose && (
                   <button
                     type="button"
                     onClick={onClose}
                     className="h-8 w-8 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6] flex items-center justify-center"
-                    title="Закрыть"
+                    title={t("Закрыть")}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -374,8 +377,9 @@ export function PlacementTestModal({
               </div>
 
               <p className="text-xs text-[#7B6FA6] leading-relaxed">
-                Выберите свой текущий уровень от 0 до 10. По мере обучения уровень будет
-                расти автоматически.
+                {t(
+                  "Выберите свой текущий уровень от 0 до 10. По мере обучения уровень будет расти автоматически."
+                )}
               </p>
 
               <div className="grid grid-cols-6 gap-1.5">
@@ -401,10 +405,10 @@ export function PlacementTestModal({
               <div className="text-center min-h-[32px]">
                 {manualLevel !== null && (
                   <p className="text-xs text-[#7B6FA6]">
-                    Уровень {manualLevel}/10 ·{" "}
-                    <span className="font-medium text-[#2A2352]">
-                      {proficiencyLabel(manualLevel)}
-                    </span>
+                    {t("Уровень {n}/10 · {label}", {
+                      n: manualLevel,
+                      label: t(proficiencyLabel(manualLevel)),
+                    })}
                   </p>
                 )}
               </div>
@@ -415,7 +419,7 @@ export function PlacementTestModal({
                   disabled={manualLevel === null || isSaving}
                   className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
                 >
-                  <span>{isSaving ? "Сохраняем..." : "Сохранить уровень"}</span>
+                  <span>{isSaving ? t("Сохраняем...") : t("Сохранить уровень")}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
                 {questions.length > 0 && (
@@ -425,7 +429,7 @@ export function PlacementTestModal({
                     className="w-full text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors flex items-center justify-center gap-1"
                   >
                     <ArrowLeft className="h-3 w-3" />
-                    Вернуться к тесту
+                    {t("Вернуться к тесту")}
                   </button>
                 )}
               </div>
@@ -440,29 +444,33 @@ export function PlacementTestModal({
 
               <div>
                 <h2 className="text-lg font-semibold text-[#2A2352]">
-                  {result.mode === "test" ? "Тест пройден!" : "Уровень сохранён!"}
+                  {result.mode === "test" ? t("Тест пройден!") : t("Уровень сохранён!")}
                 </h2>
                 <p className="text-xs text-[#7B6FA6] mt-1">
                   {result.mode === "test"
-                    ? `Правильных ответов: ${result.score} из ${result.total}`
-                    : "Уровень выбран вручную"}
+                    ? t("Правильных ответов: {s} из {t}", {
+                        s: result.score,
+                        t: result.total,
+                      })
+                    : t("Уровень выбран вручную")}
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-[#F0EAFB] border border-[#B7A0F6]">
-                <p className="text-xs text-[#7B6FA6]">Ваш уровень владения</p>
+                <p className="text-xs text-[#7B6FA6]">{t("Ваш уровень владения")}</p>
                 <p className="text-3xl font-bold text-[#2A2352] mt-1">
                   {result.level}
                   <span className="text-base font-medium text-[#7B6FA6]">/10</span>
                 </p>
                 <p className="text-sm font-medium text-[#2A2352] mt-0.5">
-                  {proficiencyLabel(result.level)}
+                  {t(proficiencyLabel(result.level))}
                 </p>
               </div>
 
               <p className="text-xs text-[#7B6FA6] leading-relaxed">
-                Мы подняли подходящие вам колоды наверх списка. Уровень будет расти
-                автоматически по мере выученных слов, а тест можно пройти заново в любой момент.
+                {t(
+                  "Мы подняли подходящие вам колоды наверх списка. Уровень будет расти автоматически по мере выученных слов, а тест можно пройти заново в любой момент."
+                )}
               </p>
 
               <Button
@@ -470,7 +478,7 @@ export function PlacementTestModal({
                 className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
                 disabled={isSaving}
               >
-                <span>{isSaving ? "Сохраняем..." : "Начать обучение"}</span>
+                <span>{isSaving ? t("Сохраняем...") : t("Начать обучение")}</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
