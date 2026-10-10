@@ -6,6 +6,7 @@ import { useAuth } from "@/context/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
@@ -34,6 +35,15 @@ export default function SettingsPage() {
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
+
+  // Dev / tester testing panel
+  const [devInfo, setDevInfo] = useState<{
+    isDev: boolean;
+    isTester: boolean;
+    testers: string[];
+  } | null>(null);
+  const [testerInput, setTesterInput] = useState("");
+  const [isSavingTester, setIsSavingTester] = useState(false);
 
   // Native Telegram Back Button integration
   useEffect(() => {
@@ -73,6 +83,87 @@ export default function SettingsPage() {
       fetchLimits();
     }
   }, [isAuthLoading, fetchLimits]);
+
+  const fetchDevInfo = useCallback(async () => {
+    try {
+      const headers: HeadersInit = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/dev/testers", { headers });
+      const data = await res.json();
+      if (data.success) {
+        setDevInfo({
+          isDev: Boolean(data.is_dev),
+          isTester: Boolean(data.is_tester),
+          testers: data.testers || [],
+        });
+      }
+    } catch {
+      // The testing panel is optional — ignore errors
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!isAuthLoading) {
+      fetchDevInfo();
+    }
+  }, [isAuthLoading, fetchDevInfo]);
+
+  const handleAddTester = async () => {
+    const id = testerInput.trim();
+    if (!id || isSavingTester) return;
+    setIsSavingTester(true);
+    setMessage(null);
+    try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/dev/testers", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ telegram_id: id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDevInfo((prev) => (prev ? { ...prev, testers: data.testers || [] } : prev));
+        setTesterInput("");
+        setMessage(`Тестировщик ${id} добавлен`);
+      } else {
+        setMessage(data.error || "Не удалось добавить тестировщика");
+      }
+    } catch {
+      setMessage("Не удалось добавить тестировщика");
+    } finally {
+      setIsSavingTester(false);
+    }
+  };
+
+  const handleRemoveTester = async (id: string) => {
+    if (isSavingTester) return;
+    setIsSavingTester(true);
+    setMessage(null);
+    try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/dev/testers", {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({ telegram_id: id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDevInfo((prev) => (prev ? { ...prev, testers: data.testers || [] } : prev));
+        setMessage(`Тестировщик ${id} удалён`);
+      } else {
+        setMessage(data.error || "Не удалось удалить тестировщика");
+      }
+    } catch {
+      setMessage("Не удалось удалить тестировщика");
+    } finally {
+      setIsSavingTester(false);
+    }
+  };
 
   const handleCheckout = async () => {
     setIsCheckingOut(true);
@@ -335,35 +426,89 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Dev Testing Controls */}
-      <Card className="border-[#DCD0F5] bg-[#F2ECFC] rounded-2xl shadow-none">
-        <CardContent className="p-4 space-y-2.5">
-          <p className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
-            Тестирование для разработки
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isUpdating}
-              onClick={handleResetLimits}
-              className="flex-1 text-xs h-9 bg-white"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Сбросить счетчик (0/20)
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isUpdating}
-              onClick={() => handleSetPlan(isPro ? "free" : "pro")}
-              className="flex-1 text-xs h-9 bg-white"
-            >
-              Переключить на {isPro ? "Free" : "Pro"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Dev Testing Controls — visible to the developer and testers only */}
+      {(devInfo?.isDev || devInfo?.isTester) && (
+        <Card className="border-[#DCD0F5] bg-[#F2ECFC] rounded-2xl shadow-none">
+          <CardContent className="p-4 space-y-2.5">
+            <p className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
+              Тестирование для разработки
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isUpdating}
+                onClick={handleResetLimits}
+                className="flex-1 text-xs h-9 bg-white"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Сбросить счетчик ({voiceUsed}/{voiceLimit})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isUpdating}
+                onClick={() => handleSetPlan(isPro ? "free" : "pro")}
+                className="flex-1 text-xs h-9 bg-white"
+              >
+                Переключить на {isPro ? "Free" : "Pro"}
+              </Button>
+            </div>
+
+            {/* Tester management — developer only */}
+            {devInfo?.isDev && (
+              <div className="space-y-2 pt-2.5 border-t border-[#DCD0F5]">
+                <p className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
+                  Тестировщики ({devInfo.testers.length})
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={testerInput}
+                    onChange={(e) => setTesterInput(e.target.value)}
+                    placeholder="Telegram ID"
+                    inputMode="numeric"
+                    className="h-9 text-xs bg-white"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={isSavingTester || !testerInput.trim()}
+                    onClick={handleAddTester}
+                    className="h-9 text-xs px-4 bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0]"
+                  >
+                    Добавить
+                  </Button>
+                </div>
+
+                {devInfo.testers.length > 0 && (
+                  <div className="space-y-1.5">
+                    {devInfo.testers.map((tid) => (
+                      <div
+                        key={tid}
+                        className="flex items-center justify-between bg-white border border-[#DCD0F5] rounded-xl px-3 py-1.5"
+                      >
+                        <span className="text-xs text-[#2A2352] font-medium">{tid}</span>
+                        <button
+                          type="button"
+                          disabled={isSavingTester}
+                          onClick={() => handleRemoveTester(tid)}
+                          className="text-[11px] text-[#A63A4B] underline hover:no-underline transition-all"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[10px] text-[#7B6FA6] leading-relaxed">
+                  Тестировщики получают эти же кнопки в своём аккаунте, но не могут
+                  добавлять других. Ваш ID: {user?.telegram_id || "—"} (разработчик)
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </main>
   );
 }

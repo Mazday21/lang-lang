@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserIdFromRequest } from "@/lib/auth/get-user-id";
 import { getUserLimits, resetUserLimits, setUserPlan } from "@/lib/limits";
+import { getTelegramIdByUserId, isDevOrTester } from "@/lib/data/dev-testers";
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,6 +27,12 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { action, plan } = body;
+
+    // Dev/tester-only actions: nobody else can reset limits or flip their plan
+    const telegramId = await getTelegramIdByUserId(userId);
+    if (!(await isDevOrTester(telegramId))) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
     if (action === "reset") {
       await resetUserLimits(userId);

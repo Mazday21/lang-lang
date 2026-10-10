@@ -91,6 +91,12 @@ create table if not exists public.cards (
 create index if not exists idx_cards_user_id on public.cards(user_id);
 create index if not exists idx_cards_next_review on public.cards(user_id, next_review_at);
 
+-- 4c. DEV TESTERS (testing panel access, managed by the developer)
+create table if not exists public.dev_testers (
+  id text primary key,                              -- Telegram ID of the tester
+  added_at timestamptz not null default now()
+);
+
 -- 4b. REVIEW LOG (analytics for the AI refill pipeline)
 create table if not exists public.review_log (
   id uuid primary key default gen_random_uuid(),
