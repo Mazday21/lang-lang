@@ -44,6 +44,7 @@ export default function SettingsPage() {
   } | null>(null);
   const [testerInput, setTesterInput] = useState("");
   const [isSavingTester, setIsSavingTester] = useState(false);
+  const [devMessage, setDevMessage] = useState<string | null>(null);
 
   // Native Telegram Back Button integration
   useEffect(() => {
@@ -113,7 +114,7 @@ export default function SettingsPage() {
     const id = testerInput.trim();
     if (!id || isSavingTester) return;
     setIsSavingTester(true);
-    setMessage(null);
+    setDevMessage(null);
     try {
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -127,12 +128,12 @@ export default function SettingsPage() {
       if (data.success) {
         setDevInfo((prev) => (prev ? { ...prev, testers: data.testers || [] } : prev));
         setTesterInput("");
-        setMessage(`Тестировщик ${id} добавлен`);
+        setDevMessage(`✅ Тестировщик ${id} добавлен`);
       } else {
-        setMessage(data.error || "Не удалось добавить тестировщика");
+        setDevMessage(`❌ ${data.error || "Не удалось добавить тестировщика"}`);
       }
     } catch {
-      setMessage("Не удалось добавить тестировщика");
+      setDevMessage("❌ Не удалось добавить тестировщика");
     } finally {
       setIsSavingTester(false);
     }
@@ -141,7 +142,7 @@ export default function SettingsPage() {
   const handleRemoveTester = async (id: string) => {
     if (isSavingTester) return;
     setIsSavingTester(true);
-    setMessage(null);
+    setDevMessage(null);
     try {
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -154,12 +155,12 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         setDevInfo((prev) => (prev ? { ...prev, testers: data.testers || [] } : prev));
-        setMessage(`Тестировщик ${id} удалён`);
+        setDevMessage(`✅ Тестировщик ${id} удалён`);
       } else {
-        setMessage(data.error || "Не удалось удалить тестировщика");
+        setDevMessage(`❌ ${data.error || "Не удалось удалить тестировщика"}`);
       }
     } catch {
-      setMessage("Не удалось удалить тестировщика");
+      setDevMessage("❌ Не удалось удалить тестировщика");
     } finally {
       setIsSavingTester(false);
     }
@@ -373,19 +374,19 @@ export default function SettingsPage() {
           <ul className="text-xs text-[#2A2352] space-y-2">
             <li className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-              <span>Безлимитная проверка ответов ИИ-репетитором</span>
+              <span>Создание персональных колод по любой теме с помощью ИИ</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-              <span>Динамическая генерация контекста для каждого правила</span>
+              <span>60 голосовых проверок в день с умным распознаванием речи</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-              <span>Создание персональных колод по любой теме (AI Builder)</span>
+              <span>Умные закрепляющие колоды под ваши слабые места</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-              <span>Голосовой ввод Whisper без дневных лимитов</span>
+              <span>Новые функции и обновления — первыми</span>
             </li>
           </ul>
 
@@ -478,6 +479,12 @@ export default function SettingsPage() {
                     Добавить
                   </Button>
                 </div>
+
+                {devMessage && (
+                  <div className="text-[11px] text-[#2A2352] bg-white border border-[#DCD0F5] p-2 rounded-xl">
+                    {devMessage}
+                  </div>
+                )}
 
                 {devInfo.testers.length > 0 && (
                   <div className="space-y-1.5">

@@ -71,39 +71,68 @@ export async function listTesters(): Promise<string[]> {
   }
 
   const supabase = getSupabaseAdminClient();
-  const { data } = await supabase
-    .from("dev_testers")
-    .select("id")
-    .order("added_at", { ascending: true });
+  const { data, error } = await supabase.from("dev_testers").select("id");
+  if (error) {
+    console.warn("Failed to list testers:", error.message);
+    return [];
+  }
 
-  return (data || []).map((r) => normalizeTelegramId(r.id));
+  return (data || [])
+    .map((r) => normalizeTelegramId(r.id))
+    .sort((a, b) => Number(a) - Number(b));
 }
 
-/** Adds a tester by Telegram ID. Returns false for invalid/dev ids. */
-export async function addTester(telegramId: string | number): Promise<boolean> {
+export interface TesterActionResult {
+  ok: boolean;
+  error?: string;
+}
+
+/** Adds a tester by Telegram ID. */
+export async function addTester(
+  telegramId: string | number
+): Promise<TesterActionResult> {
   const id = normalizeTelegramId(telegramId);
-  if (!id || id === DEV_TELEGRAM_ID) return false;
+  if (!id) return { ok: false, error: "Укажите числовой Telegram ID" };
+  if (id === DEV_TELEGRAM_ID) {
+    return { ok: false, error: "Это ID разработчика — у него доступ уже есть" };
+  }
 
   if (!isSupabaseConfigured()) {
     mockTesters.add(id);
-    return true;
+    return { ok: true };
   }
 
   const supabase = getSupabaseAdminClient();
   const { error } = await supabase.from("dev_testers").upsert({ id });
-  return !error;
+  if (error) {
+    const missingTable =
+      error.code === "42P01" || /dev_testers/i.test(error.message || "");
+    return {
+      ok: false,
+      error: missingTable
+        ? "Таблица dev_testers не найдена — выполните SQL-миграцию из supabase/schema.sql"
+        : `Не удалось сохранить тестировщика: ${error.message}`,
+    };
+  }
+
+  return { ok: true };
 }
 
 /** Removes a tester by Telegram ID. */
-export async function removeTester(telegramId: string | number): Promise<void> {
+export async function removeTester(telegramId: string | number): Promise<TesterActionResult> {
   const id = normalizeTelegramId(telegramId);
-  if (!id) return;
+  if (!id) return { ok: false, error: "Укажите числовой Telegram ID" };
 
   if (!isSupabaseConfigured()) {
     mockTesters.delete(id);
-    return;
+    return { ok: true };
   }
 
   const supabase = getSupabaseAdminClient();
-  await supabase.from("dev_testers").delete().eq("id", id);
+  const { error } = await supabase.from("dev_testers").delete().eq("id", id);
+  if (error) {
+    return { ok: false, error: `Не удалось удалить тестировщика: ${error.message}` };
+  }
+
+  return { ok: true };
 }

@@ -59,12 +59,9 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const targetId = String(body?.telegram_id ?? "").trim();
-    const ok = await addTester(targetId);
-    if (!ok) {
-      return NextResponse.json(
-        { success: false, error: "Некорректный Telegram ID (или это ID разработчика)" },
-        { status: 400 }
-      );
+    const result = await addTester(targetId);
+    if (!result.ok) {
+      return NextResponse.json({ success: false, error: result.error }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, testers: await listTesters() });
@@ -92,7 +89,10 @@ export async function DELETE(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
-    await removeTester(String(body?.telegram_id ?? ""));
+    const result = await removeTester(String(body?.telegram_id ?? ""));
+    if (!result.ok) {
+      return NextResponse.json({ success: false, error: result.error }, { status: 400 });
+    }
 
     return NextResponse.json({ success: true, testers: await listTesters() });
   } catch (err: unknown) {
