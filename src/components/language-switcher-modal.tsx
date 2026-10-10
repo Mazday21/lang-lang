@@ -36,11 +36,13 @@ export function LanguageSwitcherModal({
       return [
         { code: "uz", codeBadge: "UZ", name: "O'zbekcha (Узбекский)" },
         { code: "en", codeBadge: "EN", name: "English (Английский)" },
+        { code: "it", codeBadge: "IT", name: "Italiano (Итальянский)" },
       ];
     } else {
       return [
         { code: "en", codeBadge: "EN", name: "English (Ingliz tili)" },
         { code: "ru", codeBadge: "RU", name: "Русский (Rus tili)" },
+        { code: "it", codeBadge: "IT", name: "Italiano (Italyan tili)" },
       ];
     }
   };

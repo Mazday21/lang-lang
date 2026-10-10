@@ -22,6 +22,7 @@ const LANG_NAMES: Record<string, string> = {
   ru: "русский",
   uz: "узбекский",
   en: "английский",
+  it: "итальянский",
 };
 
 function langName(code: string): string {

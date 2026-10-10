@@ -233,6 +233,105 @@ export const PLACEMENT_TESTS: Record<string, PlacementTest> = {
       },
     ],
   },
+
+  // 5. RU -> IT
+  "ru-it": {
+    pair: "ru-it",
+    questions: [
+      {
+        text: "«Спасибо» — как будет по-итальянски?",
+        options: ["Prego", "Grazie", "Ciao", "Scusi"],
+        correctIndex: 1,
+      },
+      {
+        text: "«Где находится станция?» — выберите верный вариант",
+        options: ["Che ora è?", "Come va?", "Dov'è la stazione?", "Chi è?"],
+        correctIndex: 2,
+      },
+      {
+        text: "«Я хочу кофе» — как будет?",
+        options: ["Voglio andare", "Voglio un caffè", "Sono un caffè", "Prendo il tè domani"],
+        correctIndex: 1,
+      },
+      {
+        text: "«Вчера мы были в Риме» — прошедшее время",
+        options: ["Domani andiamo a Roma", "Siamo a Roma", "Ieri siamo stati a Roma", "Andiamo a Roma ieri"],
+        correctIndex: 2,
+      },
+      {
+        text: "«Я не понял, повторите» — выберите верный вариант",
+        options: [
+          "Non so, mi dica",
+          "Ho capito, non ripeta",
+          "Ripeta domani",
+          "Non ho capito, ripeta, per favore",
+        ],
+        correctIndex: 3,
+      },
+      {
+        text: "«Если бы я знал, я бы пришёл» — усложнённая конструкция",
+        options: [
+          "Se avessi saputo, sarei venuto",
+          "Se sapevo, vengo",
+          "Se so, sarei venuto",
+          "Avendo saputo, vengo",
+        ],
+        correctIndex: 0,
+      },
+    ],
+  },
+
+  // 6. UZ -> IT
+  "uz-it": {
+    pair: "uz-it",
+    questions: [
+      {
+        text: "«Salom» — nima degani?",
+        options: ["Grazie", "Ciao", "Arrivederci", "Prego"],
+        correctIndex: 1,
+      },
+      {
+        text: "«Katta rahmat» — nima degani?",
+        options: ["Mi scusi", "Buonasera", "Grazie mille", "Prego"],
+        correctIndex: 2,
+      },
+      {
+        text: "«Bu qancha turadi?» — qanday tarjima qilinadi?",
+        options: ["Dov'è?", "Come va?", "Quanto costa?", "Chi è?"],
+        correctIndex: 2,
+      },
+      {
+        text: "«Kecha biz Romada edik» — o'tgan zamon",
+        options: [
+          "Domani andiamo a Roma",
+          "Siamo a Roma",
+          "Andiamo a Roma ieri",
+          "Ieri siamo stati a Roma",
+        ],
+        correctIndex: 3,
+      },
+      {
+        text: "«Tushunmadim, qayta ayting» — to'g'ri variantni tanlang",
+        options: [
+          "Non ho capito, ripeta, per favore",
+          "Non so, mi dica",
+          "Ho capito",
+          "Ripeta domani",
+        ],
+        correctIndex: 0,
+      },
+      {
+        text: "«Bilsam, kelardim» — murakkab tuzilma",
+        options: [
+          "Se so, vengo",
+          "Se avessi saputo, sarei venuto",
+          "Sapevo, venivo",
+          "Se sapevo, vengo",
+        ],
+        correctIndex: 1,
+      },
+    ],
+  },
 };
 
 /** Returns the placement test for a pair key (e.g. "ru-uz"), or null. */

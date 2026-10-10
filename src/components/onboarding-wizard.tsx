@@ -32,6 +32,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           name: "English",
           subtitle: "Английский язык • Для работы и путешествий",
         },
+        {
+          code: "it",
+          codeBadge: "IT",
+          name: "Italiano",
+          subtitle: "Итальянский язык • Музыка, кухня и путешествия",
+        },
       ];
     } else {
       return [
@@ -46,6 +52,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           codeBadge: "RU",
           name: "Русский",
           subtitle: "Rus tili • Muloqot va kundalik iboralar",
+        },
+        {
+          code: "it",
+          codeBadge: "IT",
+          name: "Italiano",
+          subtitle: "Italyan tili • Musiqa, oshxona va sayohat",
         },
       ];
     }

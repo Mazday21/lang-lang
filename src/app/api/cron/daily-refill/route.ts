@@ -15,7 +15,7 @@ export const maxDuration = 300;
  */
 
 const MAX_USERS_PER_RUN = 20;
-const KNOWN_PAIRS = ["ru-uz", "ru-en", "uz-ru", "uz-en"];
+const KNOWN_PAIRS = ["ru-uz", "ru-en", "uz-ru", "uz-en", "ru-it", "uz-it"];
 
 export async function GET(req: NextRequest) {
   try {

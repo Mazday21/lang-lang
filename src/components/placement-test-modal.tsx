@@ -41,11 +41,13 @@ function getTargetOptions(native: string) {
     return [
       { code: "uz", badge: "UZ", name: "Узбекский" },
       { code: "en", badge: "EN", name: "Английский" },
+      { code: "it", badge: "IT", name: "Итальянский" },
     ];
   }
   return [
     { code: "ru", badge: "RU", name: "Русский" },
     { code: "en", badge: "EN", name: "Английский" },
+    { code: "it", badge: "IT", name: "Итальянский" },
   ];
 }
 

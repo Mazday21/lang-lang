@@ -13,6 +13,7 @@ export function normalizeLangCode(lang: string | null | undefined): string {
   if (cleaned === "gb" || cleaned.includes("en") || cleaned.includes("анг") || cleaned.includes("ing")) return "en";
   if (cleaned.includes("ru") || cleaned.includes("рус")) return "ru";
   if (cleaned.includes("uz") || cleaned.includes("узб") || cleaned.includes("o'zb") || cleaned.includes("ozb")) return "uz";
+  if (cleaned.includes("it") || cleaned.includes("итал") || cleaned.includes("ital")) return "it";
   if (cleaned.includes("tt") || cleaned.includes("тат")) return "tt";
 
   // Take first 2 Latin characters if available
@@ -122,6 +123,9 @@ export function detectLanguageFromText(text: string, defaultLang = "узбекс
   ) {
     return "английский";
   }
+  if (lower.includes("итал") || lower.includes("italian") || lower.includes("italiano")) {
+    return "итальянский";
+  }
   if (
     lower.includes("русск") ||
     lower.includes("russian") ||
@@ -141,6 +145,7 @@ export function languageToIsoCode(language: string): string {
   if (lower.includes("узбек")) return "uz";
   if (lower.includes("татар")) return "tt";
   if (lower.includes("англ")) return "en";
+  if (lower.includes("итал")) return "it";
   if (lower.includes("рус")) return "ru";
   return "uz";
 }
