@@ -25,6 +25,81 @@ export function isOpenRouterConfigured(): boolean {
 }
 
 /**
+ * Cheap speech-to-text via OpenRouter chat completions with audio input.
+ * Default model: google/gemini-2.0-flash-lite-001 — the cheapest audio-input model
+ * on OpenRouter ($0.075/$0.30 per 1M tokens, a voice message costs ~$0.00003).
+ * Override with OPENROUTER_STT_MODEL env var.
+ */
+export const DEFAULT_OPENROUTER_STT_MODEL =
+  process.env.OPENROUTER_STT_MODEL || "google/gemini-2.0-flash-lite-001";
+
+export async function callOpenRouterAudioTranscription(
+  systemPrompt: string,
+  audioBase64: string,
+  mimeType: string,
+  contextPrompt = "",
+  model = DEFAULT_OPENROUTER_STT_MODEL
+): Promise<string | null> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return null;
+
+  const format = mimeType.split("/")[1]?.split(";")[0] || "webm";
+
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer":
+          process.env.NEXT_PUBLIC_APP_URL || "https://github.com/Mazday21/lang-lang",
+        "X-Title": "LangLang Trainer",
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: contextPrompt
+                  ? `Ожидаемый контекст: "${contextPrompt}". Сделай точную транскрипцию аудио:`
+                  : "Сделай точную транскрипцию аудио:",
+              },
+              {
+                type: "input_audio",
+                input_audio: { data: audioBase64, format },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("OpenRouter STT error:", res.status, errText);
+      return null;
+    }
+
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) return null;
+
+    return content
+      .replace(/^(транскрипция|transcription|текст):\s*/i, "")
+      .replace(/^["'«»]|["'«»]$/g, "")
+      .trim();
+  } catch (err) {
+    console.error("OpenRouter STT call failed:", err);
+    return null;
+  }
+}
+
+/**
  * Calls OpenRouter chat completions with JSON response mode and parses the result.
  * Returns null on any failure (network, auth, invalid JSON) — callers decide fallbacks.
  */

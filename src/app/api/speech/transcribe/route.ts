@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGeminiAudioTranscription } from "@/lib/ai/gemini";
+import {
+  callOpenRouterAudioTranscription,
+  isOpenRouterConfigured,
+  DEFAULT_OPENROUTER_STT_MODEL,
+} from "@/lib/ai/openrouter";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,16 +23,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-
     // Required exact system prompt
     const systemPrompt = `Ты распознаешь речь пользователя, изучающего ${targetLanguage}. Верни только точный текст того, что было сказано, без перевода и пояснений.`;
 
-    if (apiKey) {
-      const arrayBuffer = await file.arrayBuffer();
-      const base64Audio = Buffer.from(arrayBuffer).toString("base64");
-      const mimeType = file.type || "audio/webm";
+    const arrayBuffer = await file.arrayBuffer();
+    const base64Audio = Buffer.from(arrayBuffer).toString("base64");
+    const mimeType = file.type || "audio/webm";
 
+    // 1. Cheap STT via OpenRouter (gemini-2.0-flash-lite by default)
+    if (isOpenRouterConfigured()) {
+      const text = await callOpenRouterAudioTranscription(
+        systemPrompt,
+        base64Audio,
+        mimeType,
+        prompt
+      );
+
+      if (text) {
+        return NextResponse.json({
+          success: true,
+          text,
+          provider: `openrouter:${DEFAULT_OPENROUTER_STT_MODEL}`,
+          targetLanguage,
+        });
+      }
+    }
+
+    // 2. Fallback: Gemini direct API
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey) {
       const text = await callGeminiAudioTranscription(
         systemPrompt,
         base64Audio,

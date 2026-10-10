@@ -18,6 +18,246 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
   // 1. RU -> UZ
   "ru-uz": [
     {
+      title: "Грамматика: прошедшее время",
+      description: "Углублённое изучение: глаголы прошедшего времени (-di) и отрицание",
+      native_language: "ru",
+      target_language: "uz",
+      language_pair: "ru-uz",
+      level: 3,
+      cards: [
+        {
+          front: "Я сделал",
+          back: "Men qildim",
+          rule_description: "Прошедшее время -di: qil + di + m (1-е лицо ед. ч.).",
+        },
+        {
+          front: "Ты пошёл",
+          back: "Sen bording",
+          rule_description: "Bormoq: bor + di + ng (2-е лицо ед. ч.).",
+        },
+        {
+          front: "Она прочитала",
+          back: "U o'qidi",
+          rule_description: "O'qimoq: o'qi + di (3-е лицо без личного окончания).",
+        },
+        {
+          front: "Мы были",
+          back: "Biz edik",
+          rule_description: "Связка быть в прошлом: edi + k (1-е лицо мн. ч.).",
+        },
+        {
+          front: "Я не понял",
+          back: "Tushunmadim",
+          rule_description: "Отрицание -ma- ставится перед -di: tushun + ma + di + m.",
+        },
+        {
+          front: "Что случилось?",
+          back: "Nima bo'ldi?",
+          rule_description: "Устойчивый вопрос: nima (что) + bo'ldi (стало/случилось).",
+        },
+      ],
+    },
+    {
+      title: "Эмоции и устойчивые выражения",
+      description: "Углублённое изучение: чувства, характер и популярные идиомы",
+      native_language: "ru",
+      target_language: "uz",
+      language_pair: "ru-uz",
+      level: 3,
+      cards: [
+        {
+          front: "Я рад",
+          back: "Men xursandman",
+          rule_description: "Xursand (рад) + связка -man («я есть»).",
+        },
+        {
+          front: "Я устал",
+          back: "Charchadim",
+          rule_description: "Charchamoq (уставать) в прошедшем времени: charcha + di + m.",
+        },
+        {
+          front: "Не переживайте!",
+          back: "Xavotir olmang!",
+          rule_description: "Xavotir olmoq — «переживать» (букв. «брать тревогу»); olmang — вежливый запрет.",
+        },
+        {
+          front: "Держать слово",
+          back: "So'zida turmoq",
+          rule_description: "Идиома: букв. «стоять на своём слове» — сдерживать обещание.",
+        },
+        {
+          front: "Ломать голову",
+          back: "Bosh qotirmoq",
+          rule_description: "Идиома: букв. «вскипятить голову» — много думать, решать задачу.",
+        },
+        {
+          front: "Как скажешь",
+          back: "Xo'p, xohlaganingizdek",
+          rule_description: "Xo'p (ладно) + xohlaganingizdek (как хотите/скажете).",
+        },
+      ],
+    },
+    {
+      title: "Еда и продукты",
+      description: "Продукты питания, заказ еды и базовая лексика кухни",
+      native_language: "ru",
+      target_language: "uz",
+      language_pair: "ru-uz",
+      level: 2,
+      cards: [
+        {
+          front: "Хлеб",
+          back: "Non",
+          rule_description: "Non (хлеб) — почётное слово: узбекский лаваш не режут ножом и не кладут вверх дном.",
+        },
+        {
+          front: "Мясо",
+          back: "Go'sht",
+          rule_description: "Go'sht (мясо): «mol go'shti» — говядина, «qo'y go'shti» — баранина.",
+        },
+        {
+          front: "Молоко и вода",
+          back: "Sut va suv",
+          rule_description: "Sut (молоко), suv (вода).",
+        },
+        {
+          front: "Чай",
+          back: "Choy",
+          rule_description: "«Ko'k choy» — зелёный чай, традиционный напиток в Узбекистане.",
+        },
+        {
+          front: "Я проголодался",
+          back: "Ochdim",
+          rule_description: "Лит. «открылся»: ochdim — разговорный способ сказать «хочу есть».",
+        },
+        {
+          front: "Очень вкусно!",
+          back: "Juda mazali!",
+          rule_description: "Juda (очень) + mazali (вкусный).",
+        },
+      ],
+    },
+    {
+      title: "Время и вопросительные слова",
+      description: "Дни, время и ключевые слова для вопросов",
+      native_language: "ru",
+      target_language: "uz",
+      language_pair: "ru-uz",
+      level: 2,
+      cards: [
+        {
+          front: "Сегодня",
+          back: "Bugun",
+          rule_description: "Bugun (сегодня); «bugun kechqurun» — сегодня вечером.",
+        },
+        {
+          front: "Завтра",
+          back: "Ertaga",
+          rule_description: "Ertaga (завтра); «ertalab» — утром.",
+        },
+        {
+          front: "Вчера",
+          back: "Kecha",
+          rule_description: "Kecha (вчера); «kecha kechqurun» — вчера вечером.",
+        },
+        {
+          front: "Кто?",
+          back: "Kim?",
+          rule_description: "Kim — кто (о человеке).",
+        },
+        {
+          front: "Когда?",
+          back: "Qachon?",
+          rule_description: "Qachon — когда (о времени).",
+        },
+        {
+          front: "Почему?",
+          back: "Nima uchun?",
+          rule_description: "Буквально «для чего»: nima (что) + uchun (для).",
+        },
+      ],
+    },
+    {
+      title: "Цвета и признаки",
+      description: "Основные цвета и противоположные признаки для описания предметов",
+      native_language: "ru",
+      target_language: "uz",
+      language_pair: "ru-uz",
+      level: 1,
+      cards: [
+        {
+          front: "Красный цвет",
+          back: "Qizil rang",
+          rule_description: "Qizil (красный) + rang (цвет).",
+        },
+        {
+          front: "Синий / голубой",
+          back: "Ko'k",
+          rule_description: "Ko'k покрывает и синий, и голубой; уточняют «och ko'k» (голубой).",
+        },
+        {
+          front: "Жёлтый и зелёный",
+          back: "Sariq va yashil",
+          rule_description: "Sariq (жёлтый) + va (и) + yashil (зелёный).",
+        },
+        {
+          front: "Белый и чёрный",
+          back: "Oq va qora",
+          rule_description: "Oq (белый), qora (чёрный) — базовая пара противоположностей.",
+        },
+        {
+          front: "Большой и маленький",
+          back: "Katta va kichik",
+          rule_description: "Katta (большой), kichik (маленький); «kichkina» — разговорный вариант.",
+        },
+        {
+          front: "Хороший / плохой",
+          back: "Yaxshi / yomon",
+          rule_description: "Универсальные оценки качества: yaxshi (хороший), yomon (плохой).",
+        },
+      ],
+    },
+    {
+      title: "Частые глаголы и местоимения",
+      description: "Самые употребимые глаголы и местоимения для базовых фраз",
+      native_language: "ru",
+      target_language: "uz",
+      language_pair: "ru-uz",
+      level: 1,
+      cards: [
+        {
+          front: "Я хочу",
+          back: "Men xohlayman",
+          rule_description: "Men (я) + xohlamoq (хотеть): xohla-y-man — настоящее время, 1-е лицо.",
+        },
+        {
+          front: "Ты знаешь?",
+          back: "Sen bilasanmi?",
+          rule_description: "Bilmoq (знать) + -san (2-е лицо) + -mi (вопросительная частица).",
+        },
+        {
+          front: "Мы идём / едем",
+          back: "Biz boryapmiz",
+          rule_description: "Bormoq (идти) + -yapmiz (настоящее длительное, 1-е лицо мн.).",
+        },
+        {
+          front: "Я вижу",
+          back: "Men ko'ryapman",
+          rule_description: "Ko'rmoq (видеть) + -yapman (настоящее время).",
+        },
+        {
+          front: "Я не знаю",
+          back: "Bilmayman",
+          rule_description: "Отрицание через -ma- перед окончанием: bil-ma-y-man.",
+        },
+        {
+          front: "Вы понимаете?",
+          back: "Tushunyapsizmi?",
+          rule_description: "Tushunmoq (понимать) + -siz (вежливое «вы») + -mi (вопрос).",
+        },
+      ],
+    },
+    {
       title: "Базовые фразы и приветствия",
       description: "Самые нужные фразы для вежливого общения и первого знакомства",
       native_language: "ru",
@@ -235,6 +475,246 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
 
   // 3. UZ -> RU
   "uz-ru": [
+    {
+      title: "O'tgan zamon fe'llari",
+      description: "Chuqur o'rganish: -di o'tgan zami va inkor shakllari",
+      native_language: "uz",
+      target_language: "ru",
+      language_pair: "uz-ru",
+      level: 3,
+      cards: [
+        {
+          front: "Men qildim",
+          back: "Я сделал",
+          rule_description: "O'tgan zamon -di: qil + di + m (1-shaxs yolg'iz).",
+        },
+        {
+          front: "Sen bording",
+          back: "Ты пошёл",
+          rule_description: "Bormoq: bor + di + ng (2-shaxs yolg'iz).",
+        },
+        {
+          front: "U o'qidi",
+          back: "Она прочитала",
+          rule_description: "O'qimoq: o'qi + di (3-shaxsda shaxs qo'shimchasi yo'q).",
+        },
+        {
+          front: "Biz edik",
+          back: "Мы были",
+          rule_description: "Bo'lmak fe'lining o'tgan zamon shakli: edi + k (1-shaxs ko'plik).",
+        },
+        {
+          front: "Tushunmadim",
+          back: "Я не понял",
+          rule_description: "Inkor -ma- -di dan oldin turadi: tushun + ma + di + m.",
+        },
+        {
+          front: "Nima bo'ldi?",
+          back: "Что случилось?",
+          rule_description: "O'rnatilgan savol: nima (что) + bo'ldi (стало/случилось).",
+        },
+      ],
+    },
+    {
+      title: "His-tuyg'ular va iboralar",
+      description: "Chuqur o'rganish: kayfiyat, xarakter va o'zbek iboralari",
+      native_language: "uz",
+      target_language: "ru",
+      language_pair: "uz-ru",
+      level: 3,
+      cards: [
+        {
+          front: "Men xursandman",
+          back: "Я рад",
+          rule_description: "Xursand (рад) + bog'lovchi -man («я есть»).",
+        },
+        {
+          front: "Charchadim",
+          back: "Я устал",
+          rule_description: "Charchamoq (уставать) o'tgan zamonda: charcha + di + m.",
+        },
+        {
+          front: "Xavotir olmang!",
+          back: "Не переживайте!",
+          rule_description: "Xavotir olmoq — «переживать» (so'zma-so'z «trevogu brat'»); olmang — hurmatli inkor.",
+        },
+        {
+          front: "So'zida turmoq",
+          back: "Держать слово",
+          rule_description: "Ibora: so'z (слово) + da (на) + turmoq (стоять) — va'dani bajarish.",
+        },
+        {
+          front: "Bosh qotirmoq",
+          back: "Ломать голову",
+          rule_description: "Ibora: so'zma-so'z «bosh (голова) qotirmoq (кипятить)» — ko'p o'ylash.",
+        },
+        {
+          front: "Xo'p, xohlaganingizdek",
+          back: "Как скажешь",
+          rule_description: "Xo'p (ладно) + xohlaganingizdek (как хотите).",
+        },
+      ],
+    },
+    {
+      title: "Oziq-ovqat va ichimliklar",
+      description: "Oziq-ovqat mahsulotlari, buyurtma berish va oshxona leksikasi",
+      native_language: "uz",
+      target_language: "ru",
+      language_pair: "uz-ru",
+      level: 2,
+      cards: [
+        {
+          front: "Non",
+          back: "Хлеб",
+          rule_description: "Non — o'zbek madaniyatida hurmatli ovqat: uni pichoq bilan kesmaydilar.",
+        },
+        {
+          front: "Go'sht",
+          back: "Мясо",
+          rule_description: "«Mol go'shti» — говядина, «qo'y go'shti» — баранина.",
+        },
+        {
+          front: "Sut va suv",
+          back: "Молоко и вода",
+          rule_description: "Sut (молоко), suv (вода).",
+        },
+        {
+          front: "Choy ichamizmi?",
+          back: "Выпьем чай?",
+          rule_description: "Choy (чай) + ichmoq (пить) + -mizmi (вежливый вопрос, 1-е лицо мн.).",
+        },
+        {
+          front: "Ochdim",
+          back: "Я проголодался",
+          rule_description: "So'zma-so'z «otкрыlsya»: kundalik nutqda «ochdim» — «хочу есть».",
+        },
+        {
+          front: "Juda mazali!",
+          back: "Очень вкусно!",
+          rule_description: "Juda (очень) + mazali (вкусный).",
+        },
+      ],
+    },
+    {
+      title: "Vaqt va savol so'zlari",
+      description: "Kunlar, vaqt va savol berish uchun kalit so'zlar",
+      native_language: "uz",
+      target_language: "ru",
+      language_pair: "uz-ru",
+      level: 2,
+      cards: [
+        {
+          front: "Bugun",
+          back: "Сегодня",
+          rule_description: "Bugun (сегодня); «bugun kechqurun» — сегодня вечером.",
+        },
+        {
+          front: "Ertaga",
+          back: "Завтра",
+          rule_description: "Ertaga (завтра); «ertalab» — утром.",
+        },
+        {
+          front: "Kecha",
+          back: "Вчера",
+          rule_description: "Kecha (вчера); «kecha kechqurun» — вчера вечером.",
+        },
+        {
+          front: "Kim?",
+          back: "Кто?",
+          rule_description: "Kim — shaxs haqida savol (кто).",
+        },
+        {
+          front: "Qachon?",
+          back: "Когда?",
+          rule_description: "Qachon — vaqt haqida savol (когда).",
+        },
+        {
+          front: "Nima uchun?",
+          back: "Почему?",
+          rule_description: "So'zma-so'z «nima (что) + uchun (для)» — почему.",
+        },
+      ],
+    },
+    {
+      title: "Ranglar va belgilar",
+      description: "Asosiy ranglar va qarama-qarshi belgilar",
+      native_language: "uz",
+      target_language: "ru",
+      language_pair: "uz-ru",
+      level: 1,
+      cards: [
+        {
+          front: "Qizil rang",
+          back: "Красный цвет",
+          rule_description: "Qizil (красный) + rang (цвет).",
+        },
+        {
+          front: "Ko'k",
+          back: "Синий / голубой",
+          rule_description: "Ko'k — ham sariq ko'k (тёмно-синий), ham och ko'k (голубой) ma'noda ishlatiladi.",
+        },
+        {
+          front: "Sariq va yashil",
+          back: "Жёлтый и зелёный",
+          rule_description: "Sariq (жёлтый) + va (и) + yashil (зелёный).",
+        },
+        {
+          front: "Oq va qora",
+          back: "Белый и чёрный",
+          rule_description: "Asosiy qarama-qarshi ranglar juftligi.",
+        },
+        {
+          front: "Katta va kichik",
+          back: "Большой и маленький",
+          rule_description: "Katta (большой), kichik (маленький); «kichkina» — norasmiy variant.",
+        },
+        {
+          front: "Yaxshi va yomon",
+          back: "Хороший и плохой",
+          rule_description: "Sifat baholash uchun universal so'zlar.",
+        },
+      ],
+    },
+    {
+      title: "Fe'llar va olmoshlar",
+      description: "Eng ko'p ishlatiladigan fe'llar va olmoshlar",
+      native_language: "uz",
+      target_language: "ru",
+      language_pair: "uz-ru",
+      level: 1,
+      cards: [
+        {
+          front: "Men xohlayman",
+          back: "Я хочу",
+          rule_description: "Men (я) + xohlamoq (хотеть): xohla-y-man — hozirgi zamon.",
+        },
+        {
+          front: "Sen bilasanmi?",
+          back: "Ты знаешь?",
+          rule_description: "Bilmoq (знать) + -san (2-shaxs) + -mi (savol zarrasi).",
+        },
+        {
+          front: "Biz boryapmiz",
+          back: "Мы идём / едем",
+          rule_description: "Bormoq (идти) + -yapmiz (hozirgi davomiy zamon).",
+        },
+        {
+          front: "Men ko'ryapman",
+          back: "Я вижу",
+          rule_description: "Ko'rmoq (видеть) + -yapman (hozirgi zamon).",
+        },
+        {
+          front: "Bilmayman",
+          back: "Я не знаю",
+          rule_description: "Inkor -ma- qo'shimchasi orqali: bil-ma-y-man.",
+        },
+        {
+          front: "Tushunyapsizmi?",
+          back: "Вы понимаете?",
+          rule_description: "Tushunmoq (понимать) + -siz (hurmatli «siz») + -mi (savol).",
+        },
+      ],
+    },
     {
       title: "Asosiy iboralar va salomlashish",
       description: "Kundalik muloqot va xushmuomalalik iboralari",

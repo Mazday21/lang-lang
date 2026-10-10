@@ -91,19 +91,31 @@ export function isSupabaseConfigured(): boolean {
 }
 
 /**
- * Seeds starter decks for a specific language pair (e.g. ru-uz, ru-en, uz-ru, uz-en)
+ * Seeds starter decks for a specific language pair (e.g. ru-uz, ru-en, uz-ru, uz-en).
+ * Idempotent backfill: decks whose title already exists for the pair are skipped,
+ * so newly added themes appear for existing users too. Returns the number of decks created.
  */
 export async function seedStarterDecksForPair(
   userId: string,
   nativeLang: string,
   targetLang: string
-): Promise<void> {
+): Promise<number> {
   const pairKey = `${nativeLang}-${targetLang}`.toLowerCase();
   const decksToSeed = STARTER_DECKS[pairKey] || STARTER_DECKS["ru-uz"];
+  const knownTitles = new Set<string>();
+  let seededCount = 0;
 
   if (!isSupabaseConfigured()) {
     mockStore.seededUsers.add(userId);
+    for (const d of Array.from(mockStore.decks.values())) {
+      if ((d.user_id === userId || d.is_starter) && isDeckMatchingPair(d, pairKey)) {
+        knownTitles.add(d.title.trim().toLowerCase());
+      }
+    }
     for (const seedDeck of decksToSeed) {
+      const titleKey = seedDeck.title.trim().toLowerCase();
+      if (knownTitles.has(titleKey)) continue;
+      knownTitles.add(titleKey);
       const deckId = `deck-${pairKey}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       mockStore.decks.set(deckId, {
         id: deckId,
@@ -135,12 +147,26 @@ export async function seedStarterDecksForPair(
           next_review_at: new Date(Date.now() - 60000).toISOString(),
         });
       }
+      seededCount++;
     }
-    return;
+    return seededCount;
   }
 
   const supabase = getSupabaseAdminClient();
+
+  const { data: existingRows } = await supabase
+    .from("decks")
+    .select("title")
+    .eq("language_pair", pairKey)
+    .or(`user_id.eq.${userId},is_starter.eq.true`);
+  for (const row of existingRows || []) {
+    knownTitles.add(String(row.title || "").trim().toLowerCase());
+  }
+
   for (const seedDeck of decksToSeed) {
+    const titleKey = seedDeck.title.trim().toLowerCase();
+    if (knownTitles.has(titleKey)) continue;
+    knownTitles.add(titleKey);
     const baseDeckInsert = {
       user_id: userId,
       title: seedDeck.title,
@@ -215,7 +241,10 @@ export async function seedStarterDecksForPair(
     if (cardsErr) {
       console.error("Failed to seed cards:", cardsErr);
     }
+    seededCount++;
   }
+
+  return seededCount;
 }
 
 /**
@@ -226,16 +255,10 @@ export async function updateUserLanguages(
   nativeLang: string,
   targetLang: string
 ): Promise<{ native_language: string; target_language: string }> {
-  const pairKey = `${nativeLang}-${targetLang}`.toLowerCase();
-
   if (!isSupabaseConfigured()) {
     mockStore.userLanguages.set(userId, { native: nativeLang, target: targetLang });
-    const existingDecks = Array.from(mockStore.decks.values()).filter(
-      (d) => (d.user_id === userId || d.is_starter) && isDeckMatchingPair(d, pairKey)
-    );
-    if (existingDecks.length === 0) {
-      await seedStarterDecksForPair(userId, nativeLang, targetLang);
-    }
+    // Idempotent backfill: adds missing starter decks (including new themes)
+    await seedStarterDecksForPair(userId, nativeLang, targetLang);
     return { native_language: nativeLang, target_language: targetLang };
   }
 
@@ -249,11 +272,8 @@ export async function updateUserLanguages(
     })
     .eq("id", userId);
 
-  // Check if decks for this language pair already exist
-  const existingDecks = await getUserDecks(userId, pairKey);
-  if (existingDecks.length === 0) {
-    await seedStarterDecksForPair(userId, nativeLang, targetLang);
-  }
+  // Idempotent backfill: adds missing starter decks (including new themes)
+  await seedStarterDecksForPair(userId, nativeLang, targetLang);
 
   return { native_language: nativeLang, target_language: targetLang };
 }
@@ -388,28 +408,30 @@ export async function getUserDecks(
     ? decks.filter((deck) => isDeckMatchingPair(deck, pairFilter))
     : decks;
 
-  // If user has 0 decks for this specific pair, auto-seed starter decks for this pair
-  if (matchedDecks.length === 0 && pairFilter) {
+  // Idempotent backfill: auto-seed missing starter decks for this pair (new themes appear for existing users)
+  if (pairFilter) {
     const tokens = extractDirectedLangTokens(pairFilter);
     const native = tokens[0] || "ru";
     const target = tokens[1] || "uz";
     try {
-      await seedStarterDecksForPair(userId, native, target);
-      let reseeded: any = await supabase
-        .from("decks")
-        .select("id, title, description, native_language, target_language, language_pair, level, is_dynamic, is_starter, user_id, created_at")
-        .or(`user_id.eq.${userId},is_starter.eq.true`)
-        .order("level", { ascending: true })
-        .order("created_at", { ascending: true });
-      if (reseeded.error || !reseeded.data) {
-        reseeded = await supabase
+      const seeded = await seedStarterDecksForPair(userId, native, target);
+      if (seeded > 0) {
+        let reseeded: any = await supabase
           .from("decks")
-          .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id, created_at")
+          .select("id, title, description, native_language, target_language, language_pair, level, is_dynamic, is_starter, user_id, created_at")
           .or(`user_id.eq.${userId},is_starter.eq.true`)
+          .order("level", { ascending: true })
           .order("created_at", { ascending: true });
-      }
-      if (reseeded.data && reseeded.data.length > 0) {
-        matchedDecks = reseeded.data.filter((deck: any) => isDeckMatchingPair(deck, pairFilter));
+        if (reseeded.error || !reseeded.data) {
+          reseeded = await supabase
+            .from("decks")
+            .select("id, title, description, native_language, target_language, language_pair, is_dynamic, is_starter, user_id, created_at")
+            .or(`user_id.eq.${userId},is_starter.eq.true`)
+            .order("created_at", { ascending: true });
+        }
+        if (reseeded.data && reseeded.data.length > 0) {
+          matchedDecks = reseeded.data.filter((deck: any) => isDeckMatchingPair(deck, pairFilter));
+        }
       }
     } catch (seedErr) {
       console.warn("Could not re-seed on empty query:", seedErr);
