@@ -33,6 +33,7 @@ create index if not exists idx_users_telegram_id on public.users(telegram_id);
 
 -- Proficiency level (0..10) determined by the placement mini-test
 alter table public.users add column if not exists proficiency_level integer not null default 0;
+alter table public.users add column if not exists base_level integer not null default 0;
 alter table public.users add column if not exists placement_tested boolean not null default false;
 
 -- 3. DECKS TABLE

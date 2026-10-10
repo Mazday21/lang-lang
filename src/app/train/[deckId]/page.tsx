@@ -81,6 +81,8 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   const [isCorrectResult, setIsCorrectResult] = useState<boolean>(false);
   const [isSubmittingGrade, setIsSubmittingGrade] = useState<boolean>(false);
   const [reviewedCount, setReviewedCount] = useState<number>(0);
+  // Dynamic proficiency level shown on the session-complete screen
+  const [sessionLevel, setSessionLevel] = useState<number | null>(null);
 
   // Soft paywall trigger (only used if AI limits hit during voice transcription)
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
@@ -152,6 +154,23 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       loadDeckCards();
     }
   }, [isAuthLoading, loadDeckCards]);
+
+  // When the session is over, fetch the (possibly grown) proficiency level
+  useEffect(() => {
+    const isDone = !isLoading && cards.length > 0 && currentIndex >= cards.length;
+    if (!isDone || !token) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/progress", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => null);
+        if (data?.success) setSessionLevel(data.proficiency_level ?? null);
+      } catch {
+        // Non-critical: level display is optional
+      }
+    })();
+  }, [isLoading, cards.length, currentIndex, token]);
 
   const currentCard = cards[currentIndex];
   const isFinished = !isLoading && cards.length > 0 && currentIndex >= cards.length;
@@ -380,6 +399,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             <p className="text-xs text-[#8A8493] leading-relaxed">
               Повторено карточек: {reviewedCount}. Все интервалы повторения пересчитаны по алгоритму SM-2.
             </p>
+            {sessionLevel !== null && (
+              <p className="text-xs text-[#4A4453] font-medium pt-1">
+                Уровень владения: {sessionLevel}/10
+              </p>
+            )}
           </div>
           <div className="pt-2 flex flex-col gap-2">
             <Button

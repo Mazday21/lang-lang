@@ -29,7 +29,7 @@ import { CreateDeckModal } from "@/components/create-deck-modal";
 import { PaywallModal } from "@/components/paywall-modal";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { LanguageSwitcherModal } from "@/components/language-switcher-modal";
-import { PlacementTestModal } from "@/components/placement-test-modal";
+import { PlacementTestModal, PlacementMode } from "@/components/placement-test-modal";
 
 export default function HubPage() {
   const router = useRouter();
@@ -137,7 +137,10 @@ export default function HubPage() {
         if (progressData?.success) {
           setProgress({
             proficiency_level: progressData.proficiency_level ?? 0,
+            base_level: progressData.base_level ?? 0,
             placement_tested: Boolean(progressData.placement_tested),
+            learned_points: progressData.learned_points ?? 0,
+            mastered_cards: progressData.mastered_cards ?? 0,
           });
         }
       } catch (err: unknown) {
@@ -201,28 +204,43 @@ export default function HubPage() {
     await fetchDecksAndLimits(newNative, newTarget);
   };
 
-  // Saves placement test results (server re-scores answers against the question bank)
+  // Saves placement result (test / manual / skip); the server re-scores the answers
+  // and grows the level dynamically from study results afterwards.
   const handlePlacementComplete = async (
     level: number,
-    _score: number,
-    _total: number,
+    mode: PlacementMode,
     answers: number[]
   ) => {
     // Optimistic update so the modal closes smoothly
-    setProgress({ proficiency_level: level, placement_tested: true });
+    setProgress((prev) => ({
+      proficiency_level: Math.max(prev?.proficiency_level ?? 0, level),
+      base_level: mode === "skip" ? prev?.base_level ?? 0 : level,
+      placement_tested: true,
+      learned_points: prev?.learned_points ?? 0,
+      mastered_cards: prev?.mastered_cards ?? 0,
+    }));
     try {
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
+      const body =
+        mode === "test"
+          ? { pair: currentPairKey, answers }
+          : mode === "manual"
+          ? { level }
+          : { skip: true };
       const res = await fetch("/api/user/progress", {
         method: "POST",
         headers,
-        body: JSON.stringify({ pair: currentPairKey, answers }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => null);
       if (data?.success) {
         setProgress({
           proficiency_level: data.proficiency_level ?? level,
+          base_level: data.base_level ?? level,
           placement_tested: Boolean(data.placement_tested),
+          learned_points: data.learned_points ?? 0,
+          mastered_cards: data.mastered_cards ?? 0,
         });
       }
     } catch {
@@ -390,6 +408,12 @@ export default function HubPage() {
                 {progress
                   ? `${progress.proficiency_level}/10 · ${proficiencyLabel(progress.proficiency_level)}`
                   : "—"}
+                {progress && progress.proficiency_level > progress.base_level && (
+                  <span className="text-[#2A472C]">
+                    {" "}
+                    (+{progress.proficiency_level - progress.base_level} за обучение)
+                  </span>
+                )}
               </span>
               <button
                 type="button"

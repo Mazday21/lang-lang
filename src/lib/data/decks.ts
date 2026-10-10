@@ -818,6 +818,64 @@ export async function countUserAiDecksSince(userId: string, sinceIso: string): P
 }
 
 /**
+ * Returns learning progress: knowledge points (sum of deck difficulty weights of
+ * "mastered" cards) and the count of mastered cards. A card is mastered when it was
+ * remembered at least twice in a row (SM-2 repetitions >= 2). Used for dynamic
+ * proficiency level growth.
+ */
+export async function getUserMasteredPoints(
+  userId: string
+): Promise<{ points: number; masteredCards: number }> {
+  if (!isSupabaseConfigured()) {
+    const deckLevels = new Map<string, number>();
+    for (const d of Array.from(mockStore.decks.values())) {
+      if (d.user_id === userId || d.is_starter) {
+        deckLevels.set(d.id, d.level || 1);
+      }
+    }
+
+    let points = 0;
+    let masteredCards = 0;
+    for (const c of Array.from(mockStore.cards.values())) {
+      const lvl = deckLevels.get(c.deck_id);
+      if (lvl !== undefined && c.repetitions >= 2) {
+        points += lvl;
+        masteredCards++;
+      }
+    }
+    return { points, masteredCards };
+  }
+
+  const supabase = getSupabaseAdminClient();
+
+  const { data: deckRows } = await supabase
+    .from("decks")
+    .select("id, level")
+    .or(`user_id.eq.${userId},is_starter.eq.true`);
+
+  const deckLevels = new Map<string, number>();
+  for (const d of deckRows || []) {
+    deckLevels.set(d.id, Number(d.level) || 1);
+  }
+  if (deckLevels.size === 0) return { points: 0, masteredCards: 0 };
+
+  const { data: cards } = await supabase
+    .from("cards")
+    .select("deck_id")
+    .in("deck_id", Array.from(deckLevels.keys()))
+    .gte("repetitions", 2)
+    .limit(5000);
+
+  let points = 0;
+  let masteredCards = 0;
+  for (const c of cards || []) {
+    points += deckLevels.get(c.deck_id) || 1;
+    masteredCards++;
+  }
+  return { points, masteredCards };
+}
+
+/**
  * Appends a review event to the review_log (best-effort analytics for the refill pipeline).
  */
 export async function logCardReview(
