@@ -3,6 +3,7 @@ import { getUserIdFromRequest } from "@/lib/auth/get-user-id";
 import {
   addTester,
   getTelegramIdByUserId,
+  getTesterProfiles,
   isDevEnvironment,
   isDevOrTester,
   isDevTelegramId,
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
       success: true,
       is_dev: isDev,
       is_tester: isTester,
-      testers: isDev ? await listTesters() : [],
+      testers: isDev ? await getTesterProfiles(await listTesters()) : [],
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to load testers";
@@ -64,7 +65,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: result.error }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, testers: await listTesters() });
+    return NextResponse.json({
+      success: true,
+      testers: await getTesterProfiles(await listTesters()),
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to add tester";
     console.error("POST /api/dev/testers error:", err);
@@ -94,7 +98,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: result.error }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, testers: await listTesters() });
+    return NextResponse.json({
+      success: true,
+      testers: await getTesterProfiles(await listTesters()),
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to remove tester";
     console.error("DELETE /api/dev/testers error:", err);

@@ -40,7 +40,7 @@ export default function SettingsPage() {
   const [devInfo, setDevInfo] = useState<{
     isDev: boolean;
     isTester: boolean;
-    testers: string[];
+    testers: Array<{ id: string; username: string | null; first_name: string | null }>;
   } | null>(null);
   const [testerInput, setTesterInput] = useState("");
   const [isSavingTester, setIsSavingTester] = useState(false);
@@ -128,7 +128,12 @@ export default function SettingsPage() {
       if (data.success) {
         setDevInfo((prev) => (prev ? { ...prev, testers: data.testers || [] } : prev));
         setTesterInput("");
-        setDevMessage(`✅ Тестировщик ${id} добавлен`);
+        const added = (data.testers || []).find(
+          (t: { id: string; username: string | null }) => t.id === id
+        );
+        setDevMessage(
+          `✅ Тестировщик добавлен: ${added?.username ? `@${added.username}` : id}`
+        );
       } else {
         setDevMessage(`❌ ${data.error || "Не удалось добавить тестировщика"}`);
       }
@@ -488,17 +493,24 @@ export default function SettingsPage() {
 
                 {devInfo.testers.length > 0 && (
                   <div className="space-y-1.5">
-                    {devInfo.testers.map((tid) => (
+                    {devInfo.testers.map((tester) => (
                       <div
-                        key={tid}
-                        className="flex items-center justify-between bg-white border border-[#DCD0F5] rounded-xl px-3 py-1.5"
+                        key={tester.id}
+                        className="flex items-center justify-between gap-2 bg-white border border-[#DCD0F5] rounded-xl px-3 py-1.5"
                       >
-                        <span className="text-xs text-[#2A2352] font-medium">{tid}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs text-[#2A2352] font-medium">{tester.id}</span>
+                          <span className="text-[11px] text-[#7B6FA6] truncate">
+                            {tester.username
+                              ? `@${tester.username}`
+                              : tester.first_name || "профиль не найден"}
+                          </span>
+                        </div>
                         <button
                           type="button"
                           disabled={isSavingTester}
-                          onClick={() => handleRemoveTester(tid)}
-                          className="text-[11px] text-[#A63A4B] underline hover:no-underline transition-all"
+                          onClick={() => handleRemoveTester(tester.id)}
+                          className="text-[11px] text-[#A63A4B] underline hover:no-underline transition-all shrink-0"
                         >
                           Удалить
                         </button>
