@@ -17,7 +17,13 @@ import {
   ExternalLink,
   Loader2,
 } from "lucide-react";
-import { UserLimitStatus, FREE_TRIAL_LIMIT } from "@/lib/limits";
+import {
+  UserLimitStatus,
+  FREE_TRIAL_LIMIT,
+  FREE_DAILY_VOICE_LIMIT,
+  PRO_DAILY_VOICE_LIMIT,
+  PRO_DAILY_GENERATION_LIMIT,
+} from "@/lib/limits";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -146,9 +152,11 @@ export default function SettingsPage() {
   };
 
   const isPro = limits?.plan === "pro";
-  const usedCount = limits?.ai_requests_used || 0;
-  const totalLimit = isPro ? "Безлимитно" : FREE_TRIAL_LIMIT;
-  const progressPercent = isPro ? 100 : Math.min(100, Math.round((usedCount / FREE_TRIAL_LIMIT) * 100));
+  const voiceUsed = limits?.voice.used ?? 0;
+  const voiceLimit = limits?.voice.limit ?? (isPro ? PRO_DAILY_VOICE_LIMIT : FREE_DAILY_VOICE_LIMIT);
+  const voicePercent = voiceLimit > 0 ? Math.min(100, Math.round((voiceUsed / voiceLimit) * 100)) : 0;
+  const genUsed = limits?.generation.used ?? 0;
+  const genPercent = Math.min(100, Math.round((genUsed / PRO_DAILY_GENERATION_LIMIT) * 100));
 
   return (
     <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-6 max-w-lg mx-auto flex flex-col gap-5">
@@ -191,36 +199,67 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
               <Zap className="h-4 w-4 text-[#B7A0F6]" />
-              Расход AI-проверок
+              Лимиты ИИ
             </CardTitle>
-            <span className="text-xs text-[#7B6FA6] font-medium">
-              {usedCount} из {totalLimit}
-            </span>
+            <Badge variant={isPro ? "secondary" : "outline"} className="text-[10px]">
+              {isPro ? "Pro" : "Free"}
+            </Badge>
           </div>
           <CardDescription className="text-xs">
             {isPro
-              ? "У вас действует безлимитный доступ к нейросети"
-              : "Бесплатный пробный лимит: 5 AI-проверок на аккаунт"}
+              ? "Ежедневные лимиты: 60 голосовых проверок и 5 генераций колод"
+              : "Пробный лимит: 5 AI-проверок на аккаунт • генерация колод в Pro"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 pt-0">
+        <CardContent className="space-y-4 pt-0">
           {isLoading ? (
-            <Skeleton className="h-3 w-full rounded-full" />
-          ) : (
-            <div className="space-y-1.5">
-              <div className="w-full bg-[#DCD0F5] h-2 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 rounded-full ${
-                    progressPercent >= 100 && !isPro ? "bg-[#F9D7DD]" : "bg-[#B9EBDD]"
-                  }`}
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[11px] text-[#7B6FA6]">
-                <span>Использовано: {usedCount}</span>
-                <span>{isPro ? "∞" : `Осталось: ${limits?.remaining ?? FREE_TRIAL_LIMIT}`}</span>
-              </div>
+            <div className="space-y-3">
+              <Skeleton className="h-3 w-full rounded-full" />
+              <Skeleton className="h-3 w-full rounded-full" />
             </div>
+          ) : (
+            <>
+              {/* Voice checks quota */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-[#2A2352]">AI-проверки голоса</span>
+                  <span className="text-[#7B6FA6]">
+                    {voiceUsed} из {voiceLimit} /день
+                  </span>
+                </div>
+                <div className="w-full bg-[#DCD0F5] h-2 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 rounded-full ${
+                      voicePercent >= 100 ? "bg-[#F9D7DD]" : "bg-[#B9EBDD]"
+                    }`}
+                    style={{ width: `${voicePercent}%` }}
+                  />
+                </div>
+                {!isPro && (
+                  <p className="text-[11px] text-[#7B6FA6]">
+                    Пробных проверок на аккаунт осталось: {limits?.remaining ?? FREE_TRIAL_LIMIT}
+                  </p>
+                )}
+              </div>
+
+              {/* Generation quota */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-[#2A2352]">Генерация колод с помощью ИИ</span>
+                  <span className="text-[#7B6FA6]">
+                    {isPro ? `${genUsed} из ${PRO_DAILY_GENERATION_LIMIT} /день` : "Доступно в Pro"}
+                  </span>
+                </div>
+                <div className="w-full bg-[#DCD0F5] h-2 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 rounded-full ${
+                      genPercent >= 100 ? "bg-[#F9D7DD]" : "bg-[#B7A0F6]"
+                    }`}
+                    style={{ width: `${isPro ? genPercent : 0}%` }}
+                  />
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

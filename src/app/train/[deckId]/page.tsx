@@ -222,6 +222,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
         const res = await fetch("/api/speech/transcribe", {
           method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
 

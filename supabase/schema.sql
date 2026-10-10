@@ -27,6 +27,10 @@ alter table public.users add column if not exists native_language text default n
 alter table public.users add column if not exists target_language text default null;
 alter table public.users add column if not exists ai_requests_today integer not null default 0;
 alter table public.users add column if not exists ai_requests_total integer not null default 0;  -- lifetime AI checks used (free trial = 5)
+alter table public.users add column if not exists voice_requests_today integer not null default 0;   -- voice checks used today
+alter table public.users add column if not exists voice_last_date text not null default to_char(now(), 'YYYY-MM-DD');
+alter table public.users add column if not exists gen_requests_today integer not null default 0;     -- AI deck generations used today
+alter table public.users add column if not exists gen_last_date text not null default to_char(now(), 'YYYY-MM-DD');
 alter table public.users add column if not exists last_request_date text not null default to_char(now(), 'YYYY-MM-DD');
 
 -- Index for instant Telegram ID lookup

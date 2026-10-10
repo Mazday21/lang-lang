@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGeminiAudioTranscription } from "@/lib/ai/gemini";
+import { getUserIdFromRequest } from "@/lib/auth/get-user-id";
+import { checkAndConsumeVoiceLimit } from "@/lib/limits";
 import {
   callOpenRouterAudioTranscription,
   isOpenRouterConfigured,
@@ -20,6 +22,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Аудиофайл не передан" },
         { status: 400 }
+      );
+    }
+
+    // AI voice checks quota (daily limit + free trial) — consumed before STT
+    const userId = await getUserIdFromRequest(req);
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+    const voiceCheck = await checkAndConsumeVoiceLimit(userId);
+    if (!voiceCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          limit_exceeded: true,
+          error: voiceCheck.error || "Лимит голосовых проверок исчерпан",
+          limits: voiceCheck,
+        },
+        { status: 403 }
       );
     }
 
