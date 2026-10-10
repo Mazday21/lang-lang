@@ -19,13 +19,17 @@ import {
   Trash2,
   Plus,
   ChevronDown,
+  Gauge,
 } from "lucide-react";
 import { DeckItem } from "@/lib/data/decks";
 import { UserLimitStatus } from "@/lib/limits";
+import { UserProgress } from "@/lib/data/user-progress";
+import { proficiencyLabel } from "@/lib/data/placement-tests";
 import { CreateDeckModal } from "@/components/create-deck-modal";
 import { PaywallModal } from "@/components/paywall-modal";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { LanguageSwitcherModal } from "@/components/language-switcher-modal";
+import { PlacementTestModal } from "@/components/placement-test-modal";
 
 export default function HubPage() {
   const router = useRouter();
@@ -48,6 +52,10 @@ export default function HubPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [isLanguageSwitcherOpen, setIsLanguageSwitcherOpen] = useState(false);
+
+  // Proficiency level (0..10) + placement test
+  const [progress, setProgress] = useState<UserProgress | null>(null);
+  const [isTestOpen, setIsTestOpen] = useState(false);
 
   // Helper to normalize language code (strictly turns "gb" into "en")
   const cleanCode = (code?: string | null, fallback = "ru") => {
@@ -74,7 +82,11 @@ export default function HubPage() {
   };
   const levelName = (level: number) => LEVEL_NAMES[level] || "Эксперт";
 
-  // Group decks by difficulty level (level 1 first)
+  // Proficiency (0..10) → recommended deck difficulty (1..5)
+  const proficiency = progress?.proficiency_level ?? 0;
+  const recommendedLevel = Math.min(5, Math.floor(proficiency / 2) + 1);
+
+  // Group decks by difficulty level, recommended groups first
   const decksByLevel = [...decks]
     .sort((a, b) => (a.level || 1) - (b.level || 1))
     .reduce<Record<number, DeckItem[]>>((acc, deck) => {
@@ -85,7 +97,10 @@ export default function HubPage() {
     }, {});
   const levelGroups = Object.keys(decksByLevel)
     .map(Number)
-    .sort((a, b) => a - b);
+    .sort(
+      (a, b) =>
+        Math.abs(a - recommendedLevel) - Math.abs(b - recommendedLevel) || a - b
+    );
 
   const fetchDecksAndLimits = useCallback(
     async (overrideNative?: string, overrideTarget?: string) => {
@@ -101,9 +116,10 @@ export default function HubPage() {
         const tar = cleanCode(overrideTarget || user?.target_language, "uz");
         const pair = `${nat}-${tar}`.toLowerCase();
 
-        const [decksRes, limitsRes] = await Promise.all([
+        const [decksRes, limitsRes, progressRes] = await Promise.all([
           fetch(`/api/decks?pair=${pair}`, { headers }),
           fetch("/api/user/limits", { headers }),
+          fetch("/api/user/progress", { headers }),
         ]);
 
         const decksData = await decksRes.json();
@@ -115,6 +131,14 @@ export default function HubPage() {
         const limitsData = await limitsRes.json();
         if (limitsData.success) {
           setLimits(limitsData);
+        }
+
+        const progressData = await progressRes.json().catch(() => null);
+        if (progressData?.success) {
+          setProgress({
+            proficiency_level: progressData.proficiency_level ?? 0,
+            placement_tested: Boolean(progressData.placement_tested),
+          });
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Ошибка загрузки";
@@ -177,6 +201,35 @@ export default function HubPage() {
     await fetchDecksAndLimits(newNative, newTarget);
   };
 
+  // Saves placement test results (server re-scores answers against the question bank)
+  const handlePlacementComplete = async (
+    level: number,
+    _score: number,
+    _total: number,
+    answers: number[]
+  ) => {
+    // Optimistic update so the modal closes smoothly
+    setProgress({ proficiency_level: level, placement_tested: true });
+    try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/user/progress", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ pair: currentPairKey, answers }),
+      });
+      const data = await res.json().catch(() => null);
+      if (data?.success) {
+        setProgress({
+          proficiency_level: data.proficiency_level ?? level,
+          placement_tested: Boolean(data.placement_tested),
+        });
+      }
+    } catch {
+      // Keep the optimistic value on network errors
+    }
+  };
+
   const handleDeleteDeck = async (deckId: string) => {
     try {
       const headers: HeadersInit = {};
@@ -203,6 +256,11 @@ export default function HubPage() {
     (!user.native_language || !user.target_language)
   );
 
+  // New users without a proficiency level take the placement mini-test first
+  const needsPlacement = Boolean(
+    user && !isAuthLoading && !needsOnboarding && progress && !progress.placement_tested
+  );
+
   if (isAuthLoading) {
     return (
       <main className="min-h-screen bg-[#FDFBF7] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
@@ -223,6 +281,15 @@ export default function HubPage() {
 
   return (
     <main className="min-h-screen bg-[#FDFBF7] text-[#4A4453] px-4 py-6 md:py-10 max-w-lg mx-auto flex flex-col gap-5">
+      {/* Placement Mini-Test Modal */}
+      <PlacementTestModal
+        isOpen={isTestOpen || needsPlacement}
+        pairKey={currentPairKey}
+        onComplete={handlePlacementComplete}
+        onClose={() => setIsTestOpen(false)}
+        canClose={!needsPlacement || isTestOpen}
+      />
+
       {/* Language Switcher Modal */}
       <LanguageSwitcherModal
         isOpen={isLanguageSwitcherOpen}
@@ -316,6 +383,22 @@ export default function HubPage() {
             <p className="text-2xl font-semibold text-[#4A4453]">
               {isLoadingDecks ? "..." : totalDue > 0 ? `${totalDue} карточек` : "Всё повторено!"}
             </p>
+            <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+              <span className="text-xs text-[#8A8493] flex items-center gap-1 whitespace-nowrap">
+                <Gauge className="h-3 w-3 text-[#E0BBE4]" />
+                Уровень владения:{" "}
+                {progress
+                  ? `${progress.proficiency_level}/10 · ${proficiencyLabel(progress.proficiency_level)}`
+                  : "—"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsTestOpen(true)}
+                className="text-[11px] text-[#8A8493] underline hover:text-[#4A4453] transition-colors"
+              >
+                {progress?.placement_tested ? "Пройти заново" : "Пройти тест"}
+              </button>
+            </div>
           </div>
           <div className="h-12 w-12 rounded-2xl bg-[#F5EFEB] flex items-center justify-center text-[#482C4E]">
             <Sparkles className="h-6 w-6 text-[#E0BBE4]" />
@@ -405,6 +488,14 @@ export default function HubPage() {
                   <span className="text-[11px] font-semibold text-[#8A8493] uppercase tracking-wider whitespace-nowrap">
                     Уровень {level} · {levelName(level)}
                   </span>
+                  {level === recommendedLevel && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] py-0 px-1.5 font-normal text-[#2A472C] border-[#C7E5C8] bg-[#F2FAF3] whitespace-nowrap"
+                    >
+                      Рекомендуем
+                    </Badge>
+                  )}
                   <div className="flex-1 h-px bg-[#E8E2D9]" />
                   <span className="text-[11px] text-[#8A8493] whitespace-nowrap">
                     {decksByLevel[level].length} колод
