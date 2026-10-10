@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           limit_exceeded: true,
+          reason: limitCheck.reason || "pro_only",
           error: limitCheck.error || "Лимит AI-генераций исчерпан — оформите подписку Pro",
           limits: limitCheck,
         },

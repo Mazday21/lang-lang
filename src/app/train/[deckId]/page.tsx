@@ -25,6 +25,7 @@ import { CardItem } from "@/lib/data/decks";
 import { SM2Grade } from "@/lib/sm2";
 import { useAudioRecorder } from "@/hooks/use-audio-recorder";
 import { PaywallModal } from "@/components/paywall-modal";
+import { DailyLimitModal } from "@/components/daily-limit-modal";
 
 type TrainingViewMode = "unanswered" | "voice_retry" | "manual_correction" | "evaluated";
 
@@ -86,6 +87,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   // Soft paywall trigger (only used if AI limits hit during voice transcription)
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
+  const [showDailyLimit, setShowDailyLimit] = useState<boolean>(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -228,7 +230,12 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
         const data = await res.json();
         if (data.limit_exceeded || res.status === 403) {
-          setShowPaywall(true);
+          // Daily limit → soft "rest until tomorrow" stub; trial exhausted → paywall
+          if (data.reason === "daily") {
+            setShowDailyLimit(true);
+          } else {
+            setShowPaywall(true);
+          }
           return;
         }
 
@@ -434,6 +441,15 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   return (
     <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-5 max-w-lg mx-auto flex flex-col gap-4">
       {/* Paywall Modal */}
+      {/* Soft daily limit stub */}
+      <DailyLimitModal
+        isOpen={showDailyLimit}
+        kind="voice"
+        onClose={() => setShowDailyLimit(false)}
+        onSecondary={() => setShowDailyLimit(false)}
+        secondaryLabel="Продолжить без голоса"
+      />
+
       <PaywallModal
         isOpen={showPaywall}
         onClose={() => setShowPaywall(false)}

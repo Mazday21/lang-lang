@@ -24,6 +24,9 @@ export const FREE_DAILY_VOICE_LIMIT = 3;     // voice checks per day (free)
 export const PRO_DAILY_VOICE_LIMIT = 60;     // voice checks per day (Pro)
 export const PRO_DAILY_GENERATION_LIMIT = 5; // AI deck generations per day (Pro)
 
+/** Why a request was denied: "daily" limits reset tomorrow (soft stub), "trial"/"pro_only" lead to the paywall. */
+export type LimitReason = "trial" | "daily" | "pro_only";
+
 export interface QuotaStatus {
   used: number;
   limit: number;
@@ -203,7 +206,7 @@ export async function getUserLimits(userId: string): Promise<UserLimitStatus> {
  */
 export async function checkAndConsumeVoiceLimit(
   userId: string
-): Promise<{ allowed: boolean; remaining: number; used: number; plan: string; error?: string }> {
+): Promise<{ allowed: boolean; remaining: number; used: number; plan: string; error?: string; reason?: LimitReason }> {
   const state = await readUsage(userId);
   const vLimit = voiceLimit(state.plan);
 
@@ -214,6 +217,7 @@ export async function checkAndConsumeVoiceLimit(
       used: state.trialUsed,
       plan: state.plan,
       error: "Бесплатные AI-проверки (5) исчерпаны — оформите подписку Pro",
+      reason: "trial",
     };
   }
 
@@ -224,6 +228,7 @@ export async function checkAndConsumeVoiceLimit(
       used: state.voiceUsed,
       plan: state.plan,
       error: `Дневной лимит голосовых проверок (${vLimit}) исчерпан — продолжите завтра`,
+      reason: "daily",
     };
   }
 
@@ -244,7 +249,7 @@ export async function checkAndConsumeVoiceLimit(
  */
 export async function checkAndConsumeGenerationLimit(
   userId: string
-): Promise<{ allowed: boolean; remaining: number; used: number; plan: string; error?: string }> {
+): Promise<{ allowed: boolean; remaining: number; used: number; plan: string; error?: string; reason?: LimitReason }> {
   const state = await readUsage(userId);
   const gLimit = genLimit(state.plan);
 
@@ -255,6 +260,7 @@ export async function checkAndConsumeGenerationLimit(
       used: state.genUsed,
       plan: state.plan,
       error: "Генерация колод с помощью ИИ доступна в подписке Pro",
+      reason: "pro_only",
     };
   }
 
@@ -265,6 +271,7 @@ export async function checkAndConsumeGenerationLimit(
       used: state.genUsed,
       plan: state.plan,
       error: `Дневной лимит генерации колод (${gLimit}) исчерпан — продолжите завтра`,
+      reason: "daily",
     };
   }
 
@@ -284,7 +291,7 @@ export async function checkAndConsumeGenerationLimit(
  */
 export async function checkAndConsumeAILimit(
   userId: string
-): Promise<{ allowed: boolean; remaining: number; totalToday: number; plan: string; error?: string }> {
+): Promise<{ allowed: boolean; remaining: number; totalToday: number; plan: string; error?: string; reason?: LimitReason }> {
   const state = await readUsage(userId);
   const limit = planLimit(state.plan);
 
@@ -295,6 +302,7 @@ export async function checkAndConsumeAILimit(
       totalToday: state.trialUsed,
       plan: state.plan,
       error: "Бесплатные AI-проверки (5) исчерпаны — оформите подписку Pro",
+      reason: "trial",
     };
   }
 

@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           limit_exceeded: true,
+          reason: voiceCheck.reason || "daily",
           error: voiceCheck.error || "Лимит голосовых проверок исчерпан",
           limits: voiceCheck,
         },

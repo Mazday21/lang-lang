@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           limit_exceeded: true,
+          reason: limitCheck.reason || "trial",
           error: limitCheck.error || "Лимит AI-проверок исчерпан",
           limits: limitCheck,
         },

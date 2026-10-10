@@ -11,7 +11,7 @@ interface CreateDeckModalProps {
   isOpen: boolean;
   onClose: () => void;
   token?: string | null;
-  onLimitExceeded?: () => void;
+  onLimitExceeded?: (reason?: string) => void;
   nativeLang?: string;
   targetLang?: string;
 }
@@ -86,7 +86,7 @@ export function CreateDeckModal({
 
       if (data.limit_exceeded || res.status === 403) {
         onClose();
-        if (onLimitExceeded) onLimitExceeded();
+        if (onLimitExceeded) onLimitExceeded(data.reason);
         return;
       }
 

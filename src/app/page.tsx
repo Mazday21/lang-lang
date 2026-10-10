@@ -27,6 +27,7 @@ import { UserProgress, DAILY_REVIEW_LIMIT } from "@/lib/data/user-progress";
 import { proficiencyLabel } from "@/lib/data/placement-tests";
 import { CreateDeckModal } from "@/components/create-deck-modal";
 import { PaywallModal } from "@/components/paywall-modal";
+import { DailyLimitModal } from "@/components/daily-limit-modal";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { LanguageSwitcherModal } from "@/components/language-switcher-modal";
 import { PlacementTestModal, PlacementMode } from "@/components/placement-test-modal";
@@ -51,6 +52,7 @@ export default function HubPage() {
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [showDailyLimit, setShowDailyLimit] = useState(false);
   const [isLanguageSwitcherOpen, setIsLanguageSwitcherOpen] = useState(false);
 
   // Proficiency level (0..10) + placement test
@@ -348,9 +350,23 @@ export default function HubPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         token={token}
-        onLimitExceeded={() => setIsPaywallOpen(true)}
+        onLimitExceeded={(reason?: string) => {
+          // Daily limit → soft "rest until tomorrow" stub; trial/pro → paywall
+          if (reason === "daily") {
+            setShowDailyLimit(true);
+          } else {
+            setIsPaywallOpen(true);
+          }
+        }}
         nativeLang={nativeLang}
         targetLang={targetLang}
+      />
+
+      {/* Soft daily limit stub */}
+      <DailyLimitModal
+        isOpen={showDailyLimit}
+        kind="generation"
+        onClose={() => setShowDailyLimit(false)}
       />
 
       {/* Soft Paywall Modal */}
