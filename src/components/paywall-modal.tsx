@@ -12,14 +12,37 @@ interface PaywallModalProps {
   onClose?: () => void;
   onResetLimit?: () => Promise<void>;
   token?: string | null;
+  /** Why the paywall is shown: generator is Pro-only, trial is exhausted, or a plain upsell */
+  mode?: "generator" | "trial" | "upsell";
 }
 
-export function PaywallModal({ isOpen, onClose, onResetLimit, token }: PaywallModalProps) {
+export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "trial" }: PaywallModalProps) {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const content = {
+    generator: {
+      badge: "ИИ-генератор",
+      title: "ИИ-генератор колод — в подписке Pro",
+      description:
+        "Чтобы создавать персональные колоды с помощью ИИ, оформите подписку. Обучение, голосовые проверки и стартовые колоды остаются бесплатными.",
+    },
+    trial: {
+      badge: "Пробный лимит",
+      title: "Бесплатные AI-проверки закончились",
+      description:
+        "Вы использовали 5 пробных AI-проверок на аккаунт. Оформите Pro — и продолжайте учиться без ограничений.",
+    },
+    upsell: {
+      badge: "ИИ-суперсилы",
+      title: "Откройте ИИ-суперсилы Pro",
+      description:
+        "Генерация колод по любой теме, 60 голосовых проверок в день и умные закрепляющие колоды под ваши слабые места.",
+    },
+  }[mode];
 
   const handleCheckout = async (provider = "stars") => {
     setIsProcessing(true);
@@ -72,20 +95,30 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token }: PaywallMo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-[2px] animate-in fade-in duration-200">
-      <Card className="w-full max-w-md border-[#DCD0F5] bg-[#F4EFFE] rounded-3xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <Card className="relative w-full max-w-md border-[#DCD0F5] bg-[#F4EFFE] rounded-3xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
         <CardHeader className="text-center pt-7 pb-3 px-6 space-y-2">
           <div className="h-14 w-14 rounded-2xl bg-[#B7A0F6]/30 text-[#2A2352] flex items-center justify-center mx-auto">
             <Sparkles className="h-7 w-7 text-[#2A2352]" />
           </div>
           <Badge variant="secondary" className="mx-auto text-[11px] font-medium">
-            Лимит исчерпан
+            {content.badge}
           </Badge>
           <CardTitle className="text-lg font-semibold text-[#2A2352]">
-            Бесплатные AI-проверки закончились
+            {content.title}
           </CardTitle>
           <CardDescription className="text-xs text-[#7B6FA6] leading-relaxed">
-            Бесплатные 20 проверок на сегодня подошли к концу. Возвращайтесь завтра или разблокируйте безлимит, чтобы продолжить прямо сейчас.
+            {content.description}
           </CardDescription>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-3 top-3 h-8 w-8 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6] flex items-center justify-center"
+              title="Закрыть"
+            >
+              ✕
+            </button>
+          )}
         </CardHeader>
 
         <CardContent className="space-y-4 px-6 pb-6 pt-0">
@@ -98,19 +131,19 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token }: PaywallMo
             <ul className="text-xs text-[#2A2352] space-y-2">
               <li className="flex items-start gap-2">
                 <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-                <span>Безлимитная проверка ответов ИИ-репетитором</span>
+                <span>Создание персональных колод по любой теме с помощью ИИ</span>
               </li>
               <li className="flex items-start gap-2">
                 <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-                <span>Динамическая генерация контекста для каждого правила</span>
+                <span>60 голосовых проверок в день с умным распознаванием речи</span>
               </li>
               <li className="flex items-start gap-2">
                 <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-                <span>Создание персональных колод по любой теме</span>
+                <span>Умные закрепляющие колоды под ваши слабые места</span>
               </li>
               <li className="flex items-start gap-2">
                 <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
-                <span>Умное распознавание речи Whisper без ограничений</span>
+                <span>Новые функции и обновления — первыми</span>
               </li>
             </ul>
           </div>
@@ -143,7 +176,10 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token }: PaywallMo
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push("/")}
+              onClick={() => {
+                onClose?.();
+                router.push("/");
+              }}
               className="w-full text-xs h-11 rounded-2xl flex items-center justify-center gap-1.5"
             >
               <ArrowLeft className="h-3.5 w-3.5" />

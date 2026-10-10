@@ -52,6 +52,7 @@ export default function HubPage() {
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [paywallMode, setPaywallMode] = useState<"generator" | "trial" | "upsell">("upsell");
   const [showDailyLimit, setShowDailyLimit] = useState(false);
   const [isLanguageSwitcherOpen, setIsLanguageSwitcherOpen] = useState(false);
 
@@ -351,10 +352,12 @@ export default function HubPage() {
         onClose={() => setIsCreateModalOpen(false)}
         token={token}
         onLimitExceeded={(reason?: string) => {
-          // Daily limit → soft "rest until tomorrow" stub; trial/pro → paywall
+          // Daily limit → soft "rest until tomorrow" stub; otherwise the paywall
+          // with context-aware copy (generator is Pro-only vs trial exhausted)
           if (reason === "daily") {
             setShowDailyLimit(true);
           } else {
+            setPaywallMode(reason === "pro_only" ? "generator" : "trial");
             setIsPaywallOpen(true);
           }
         }}
@@ -372,6 +375,7 @@ export default function HubPage() {
       {/* Soft Paywall Modal */}
       <PaywallModal
         isOpen={isPaywallOpen}
+        mode={paywallMode}
         onClose={() => setIsPaywallOpen(false)}
         token={token}
       />
@@ -500,7 +504,10 @@ export default function HubPage() {
         <Button
           variant="secondary"
           size="lg"
-          onClick={() => setIsPaywallOpen(true)}
+          onClick={() => {
+          setPaywallMode("upsell");
+          setIsPaywallOpen(true);
+        }}
           className="w-full text-sm font-bold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-gradient-to-r from-[#B7A0F6] to-[#9FE2CE] text-[#2A2352] hover:opacity-90"
         >
           <Sparkles className="h-4 w-4" />
@@ -575,7 +582,10 @@ export default function HubPage() {
                 <Button
                   variant="secondary"
                   size="lg"
-                  onClick={() => setIsPaywallOpen(true)}
+                  onClick={() => {
+          setPaywallMode("upsell");
+          setIsPaywallOpen(true);
+        }}
                   className="w-full text-xs font-bold h-12 rounded-2xl flex items-center justify-center gap-2 bg-gradient-to-r from-[#B7A0F6] to-[#9FE2CE] text-[#2A2352] hover:opacity-90"
                 >
                   <Sparkles className="h-4 w-4" />
