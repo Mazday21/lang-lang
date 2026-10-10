@@ -1,5 +1,9 @@
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured, getUserMasteredPoints } from "@/lib/data/decks";
+import {
+  isSupabaseConfigured,
+  getUserMasteredPoints,
+  countCardsReviewedToday,
+} from "@/lib/data/decks";
 
 /**
  * Dynamic proficiency level (0..10):
@@ -13,12 +17,19 @@ import { isSupabaseConfigured, getUserMasteredPoints } from "@/lib/data/decks";
 
 export const POINTS_PER_LEVEL = 15;
 
+/**
+ * Comfortable daily review plan: enough to make progress, never scary.
+ * The rest of the backlog calmly waits in the queue for tomorrow.
+ */
+export const DAILY_REVIEW_LIMIT = 15;
+
 export interface UserProgress {
   proficiency_level: number; // current dynamic level (0..10), shown in the UI
   base_level: number;        // from placement test / manual choice
   placement_tested: boolean;
   learned_points: number;    // knowledge points earned by studying
   mastered_cards: number;
+  reviewed_today: number;    // cards already reviewed today (daily plan progress)
 }
 
 interface ProgressRow {
@@ -109,7 +120,10 @@ async function writeRow(userId: string, row: ProgressRow): Promise<void> {
  */
 export async function getUserProgress(userId: string): Promise<UserProgress> {
   const row = await readRow(userId);
-  const { points, masteredCards } = await getUserMasteredPoints(userId);
+  const [{ points, masteredCards }, reviewedToday] = await Promise.all([
+    getUserMasteredPoints(userId),
+    countCardsReviewedToday(userId),
+  ]);
 
   const bonus = Math.floor(points / POINTS_PER_LEVEL);
   const target = Math.min(10, row.base_level + bonus);
@@ -129,6 +143,7 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
     placement_tested: row.placement_tested,
     learned_points: points,
     mastered_cards: masteredCards,
+    reviewed_today: reviewedToday,
   };
 }
 

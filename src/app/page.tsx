@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { DeckItem } from "@/lib/data/decks";
 import { UserLimitStatus } from "@/lib/limits";
-import { UserProgress } from "@/lib/data/user-progress";
+import { UserProgress, DAILY_REVIEW_LIMIT } from "@/lib/data/user-progress";
 import { proficiencyLabel } from "@/lib/data/placement-tests";
 import { CreateDeckModal } from "@/components/create-deck-modal";
 import { PaywallModal } from "@/components/paywall-modal";
@@ -141,6 +141,7 @@ export default function HubPage() {
             placement_tested: Boolean(progressData.placement_tested),
             learned_points: progressData.learned_points ?? 0,
             mastered_cards: progressData.mastered_cards ?? 0,
+            reviewed_today: progressData.reviewed_today ?? 0,
           });
         }
       } catch (err: unknown) {
@@ -218,6 +219,7 @@ export default function HubPage() {
       placement_tested: true,
       learned_points: prev?.learned_points ?? 0,
       mastered_cards: prev?.mastered_cards ?? 0,
+      reviewed_today: prev?.reviewed_today ?? 0,
     }));
     try {
       const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -241,6 +243,7 @@ export default function HubPage() {
           placement_tested: Boolean(data.placement_tested),
           learned_points: data.learned_points ?? 0,
           mastered_cards: data.mastered_cards ?? 0,
+          reviewed_today: data.reviewed_today ?? 0,
         });
       }
     } catch {
@@ -266,6 +269,21 @@ export default function HubPage() {
   };
 
   const totalDue = decks.reduce((acc, d) => acc + d.due_cards, 0);
+
+  // Daily review plan: a motivating, non-scary number; the backlog calmly waits its turn
+  const remainingToday = Math.min(
+    totalDue,
+    Math.max(0, DAILY_REVIEW_LIMIT - (progress?.reviewed_today ?? 0))
+  );
+
+  // Russian plural form for "карточка"
+  const cardsWord = (n: number) => {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "карточка";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "карточки";
+    return "карточек";
+  };
 
   // Check if first-time onboarding should be displayed
   const needsOnboarding = Boolean(
@@ -399,8 +417,21 @@ export default function HubPage() {
           <div className="space-y-1">
             <p className="text-xs text-[#8A8493] font-medium">Повторение на сегодня</p>
             <p className="text-2xl font-semibold text-[#4A4453]">
-              {isLoadingDecks ? "..." : totalDue > 0 ? `${totalDue} карточек` : "Всё повторено!"}
+              {isLoadingDecks
+                ? "..."
+                : remainingToday > 0
+                ? `${remainingToday} ${cardsWord(remainingToday)}`
+                : totalDue > 0
+                ? "План выполнен!"
+                : "Всё повторено!"}
             </p>
+            {!isLoadingDecks && totalDue > 0 && (
+              <p className="text-[11px] text-[#8A8493]">
+                {remainingToday > 0
+                  ? `Ещё ${totalDue - remainingToday} можно повторить позже`
+                  : `Ещё ${totalDue} ${cardsWord(totalDue)} — повторите позже или завтра`}
+              </p>
+            )}
             <div className="flex items-center gap-2 pt-0.5 flex-wrap">
               <span className="text-xs text-[#8A8493] flex items-center gap-1 whitespace-nowrap">
                 <Gauge className="h-3 w-3 text-[#E0BBE4]" />
@@ -554,7 +585,7 @@ export default function HubPage() {
                       <div className="pt-1 flex items-center gap-2">
                         {hasDue ? (
                           <Badge variant="default" className="text-[11px] font-medium">
-                            {deck.due_cards} на сегодня
+                            {deck.due_cards} к повторению
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-[11px] text-[#8A8493] flex items-center gap-1">

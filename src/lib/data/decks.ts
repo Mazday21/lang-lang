@@ -876,6 +876,51 @@ export async function getUserMasteredPoints(
 }
 
 /**
+ * Counts cards the user already reviewed today (SM-2 repetitions > 0 and updated today).
+ * Used to track the daily review plan progress.
+ */
+export async function countCardsReviewedToday(userId: string): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const startIso = startOfDay.toISOString();
+
+  if (!isSupabaseConfigured()) {
+    const deckIds = new Set<string>();
+    for (const d of Array.from(mockStore.decks.values())) {
+      if (d.user_id === userId || d.is_starter) deckIds.add(d.id);
+    }
+    let count = 0;
+    for (const c of Array.from(mockStore.cards.values())) {
+      if (deckIds.has(c.deck_id) && c.repetitions > 0) {
+        const updated = (c as { updated_at?: string }).updated_at;
+        if (updated && updated >= startIso) count++;
+      }
+    }
+    return count;
+  }
+
+  const supabase = getSupabaseAdminClient();
+
+  const { data: deckRows } = await supabase
+    .from("decks")
+    .select("id")
+    .or(`user_id.eq.${userId},is_starter.eq.true`);
+
+  const deckIds = (deckRows || []).map((d) => d.id);
+  if (deckIds.length === 0) return 0;
+
+  const { data: cards } = await supabase
+    .from("cards")
+    .select("id")
+    .in("deck_id", deckIds)
+    .gte("updated_at", startIso)
+    .gt("repetitions", 0)
+    .limit(5000);
+
+  return cards?.length || 0;
+}
+
+/**
  * Appends a review event to the review_log (best-effort analytics for the refill pipeline).
  */
 export async function logCardReview(
