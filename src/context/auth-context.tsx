@@ -113,8 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       tg.expand();
 
       try {
-        tg.setHeaderColor("#FDFBF7");
-        tg.setBackgroundColor("#FDFBF7");
+        tg.setHeaderColor("#F4EFFE");
+        tg.setBackgroundColor("#F4EFFE");
       } catch (styleErr) {
         console.warn("Could not set Telegram header color", styleErr);
       }

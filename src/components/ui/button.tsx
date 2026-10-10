@@ -8,15 +8,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[#C7E5C8] text-[#2A472C] hover:bg-[#BBE0BD] active:bg-[#AFDBB1] shadow-none",
+          "bg-[#B9EBDD] text-[#1D6B5B] hover:bg-[#9FE2CE] active:bg-[#8BD9C2] shadow-none",
         secondary:
-          "bg-[#E0BBE4] text-[#482C4E] hover:bg-[#D7AEDC] active:bg-[#CCA1D1] shadow-none",
+          "bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0] active:bg-[#A98CF3] shadow-none",
         outline:
-          "border border-[#E8E2D9] bg-white text-[#4A4453] hover:bg-[#FAF7F2]",
+          "border border-[#DCD0F5] bg-white text-[#2A2352] hover:bg-[#F2ECFC]",
         ghost:
-          "text-[#4A4453] hover:bg-[#F5EFEB]",
+          "text-[#2A2352] hover:bg-[#EFE9FC]",
         softPeach:
-          "bg-[#F7D6D0] text-[#6B2E28] hover:bg-[#F3C8C1]",
+          "bg-[#F9D7DD] text-[#A63A4B] hover:bg-[#F6C8D2]",
       },
       size: {
         default: "h-12 px-5 py-2.5",

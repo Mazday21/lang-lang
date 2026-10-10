@@ -151,31 +151,31 @@ export default function SettingsPage() {
   const progressPercent = isPro ? 100 : Math.min(100, Math.round((usedCount / DAILY_FREE_LIMIT) * 100));
 
   return (
-    <main className="min-h-screen bg-[#FDFBF7] text-[#4A4453] px-4 py-6 max-w-lg mx-auto flex flex-col gap-5">
+    <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-6 max-w-lg mx-auto flex flex-col gap-5">
       {/* Top Header */}
-      <header className="flex items-center justify-between pb-2 border-b border-[#E8E2D9]">
+      <header className="flex items-center justify-between pb-2 border-b border-[#DCD0F5]">
         <button
           onClick={() => router.push("/")}
-          className="flex items-center gap-1 text-xs text-[#8A8493] hover:text-[#4A4453] transition-colors -ml-1 p-1"
+          className="flex items-center gap-1 text-xs text-[#7B6FA6] hover:text-[#2A2352] transition-colors -ml-1 p-1"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>В хаб</span>
         </button>
-        <h1 className="text-sm font-semibold text-[#4A4453]">Профиль и Тариф</h1>
+        <h1 className="text-sm font-semibold text-[#2A2352]">Профиль и Тариф</h1>
         <div className="w-8" />
       </header>
 
       {/* User Information Card */}
-      <Card className="border-[#E8E2D9] bg-white rounded-2xl shadow-none">
+      <Card className="border-[#DCD0F5] bg-white rounded-2xl shadow-none">
         <CardContent className="p-5 flex items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-[#E0BBE4]/30 flex items-center justify-center text-[#482C4E] shrink-0">
-            <User className="h-6 w-6 text-[#482C4E]" />
+          <div className="h-12 w-12 rounded-2xl bg-[#B7A0F6]/30 flex items-center justify-center text-[#2A2352] shrink-0">
+            <User className="h-6 w-6 text-[#2A2352]" />
           </div>
           <div className="space-y-0.5 flex-1 min-w-0">
-            <h2 className="text-base font-semibold text-[#4A4453] truncate">
+            <h2 className="text-base font-semibold text-[#2A2352] truncate">
               {user?.first_name || "Пользователь"}
             </h2>
-            <p className="text-xs text-[#8A8493]">
+            <p className="text-xs text-[#7B6FA6]">
               {user?.username ? `@${user.username}` : `TG ID: ${user?.telegram_id || "Dev"}`}
             </p>
           </div>
@@ -186,14 +186,14 @@ export default function SettingsPage() {
       </Card>
 
       {/* AI Limits Card */}
-      <Card className="border-[#E8E2D9] bg-white rounded-2xl shadow-none">
+      <Card className="border-[#DCD0F5] bg-white rounded-2xl shadow-none">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Zap className="h-4 w-4 text-[#E0BBE4]" />
+              <Zap className="h-4 w-4 text-[#B7A0F6]" />
               Расход AI-проверок
             </CardTitle>
-            <span className="text-xs text-[#8A8493] font-medium">
+            <span className="text-xs text-[#7B6FA6] font-medium">
               {usedCount} из {totalLimit}
             </span>
           </div>
@@ -208,15 +208,15 @@ export default function SettingsPage() {
             <Skeleton className="h-3 w-full rounded-full" />
           ) : (
             <div className="space-y-1.5">
-              <div className="w-full bg-[#E8E2D9] h-2 rounded-full overflow-hidden">
+              <div className="w-full bg-[#DCD0F5] h-2 rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all duration-300 rounded-full ${
-                    progressPercent >= 100 && !isPro ? "bg-[#F7D6D0]" : "bg-[#C7E5C8]"
+                    progressPercent >= 100 && !isPro ? "bg-[#F9D7DD]" : "bg-[#B9EBDD]"
                   }`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <div className="flex justify-between text-[11px] text-[#8A8493]">
+              <div className="flex justify-between text-[11px] text-[#7B6FA6]">
                 <span>Сегодня использовано: {usedCount}</span>
                 <span>{isPro ? "∞" : `Осталось: ${limits?.remaining ?? 20}`}</span>
               </div>
@@ -226,41 +226,41 @@ export default function SettingsPage() {
       </Card>
 
       {/* Pro Subscription Offer */}
-      <Card className="border-[#E8E2D9] bg-white rounded-2xl shadow-none">
+      <Card className="border-[#DCD0F5] bg-white rounded-2xl shadow-none">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-[#482C4E]" />
+              <Sparkles className="h-4 w-4 text-[#2A2352]" />
               Тариф Pro
             </CardTitle>
-            <span className="text-xs font-semibold text-[#4A4453]">39 000 UZS / ⭐️ 150</span>
+            <span className="text-xs font-semibold text-[#2A2352]">39 000 UZS / ⭐️ 150</span>
           </div>
           <CardDescription className="text-xs">
             Полный фокус на изучении без пауз и ограничений
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-0">
-          <ul className="text-xs text-[#4A4453] space-y-2">
+          <ul className="text-xs text-[#2A2352] space-y-2">
             <li className="flex items-start gap-2">
-              <Check className="h-3.5 w-3.5 text-[#2A472C] shrink-0 mt-0.5" />
+              <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
               <span>Безлимитная проверка ответов ИИ-репетитором</span>
             </li>
             <li className="flex items-start gap-2">
-              <Check className="h-3.5 w-3.5 text-[#2A472C] shrink-0 mt-0.5" />
+              <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
               <span>Динамическая генерация контекста для каждого правила</span>
             </li>
             <li className="flex items-start gap-2">
-              <Check className="h-3.5 w-3.5 text-[#2A472C] shrink-0 mt-0.5" />
+              <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
               <span>Создание персональных колод по любой теме (AI Builder)</span>
             </li>
             <li className="flex items-start gap-2">
-              <Check className="h-3.5 w-3.5 text-[#2A472C] shrink-0 mt-0.5" />
+              <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
               <span>Голосовой ввод Whisper без дневных лимитов</span>
             </li>
           </ul>
 
           {message && (
-            <div className="text-xs text-[#2A472C] bg-[#C7E5C8]/40 border border-[#C7E5C8] p-2.5 rounded-xl text-center">
+            <div className="text-xs text-[#1D6B5B] bg-[#B9EBDD]/40 border border-[#B9EBDD] p-2.5 rounded-xl text-center">
               {message}
             </div>
           )}
@@ -271,7 +271,7 @@ export default function SettingsPage() {
               size="sm"
               disabled={isUpdating}
               onClick={() => handleSetPlan("free")}
-              className="w-full text-xs text-[#8A8493]"
+              className="w-full text-xs text-[#7B6FA6]"
             >
               Отменить Pro (Вернуться на Free)
             </Button>
@@ -297,9 +297,9 @@ export default function SettingsPage() {
       </Card>
 
       {/* Dev Testing Controls */}
-      <Card className="border-[#E8E2D9] bg-[#FAF7F2] rounded-2xl shadow-none">
+      <Card className="border-[#DCD0F5] bg-[#F2ECFC] rounded-2xl shadow-none">
         <CardContent className="p-4 space-y-2.5">
-          <p className="text-[11px] font-semibold text-[#8A8493] uppercase tracking-wider">
+          <p className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
             Тестирование для разработки
           </p>
           <div className="flex gap-2">

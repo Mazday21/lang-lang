@@ -182,12 +182,12 @@ export function PlacementTestModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-9 w-9 rounded-2xl bg-[#F5EFEB] flex items-center justify-center">
-                    <Globe className="h-5 w-5 text-[#482C4E]" />
+                  <div className="h-9 w-9 rounded-2xl bg-[#EFE9FC] flex items-center justify-center">
+                    <Globe className="h-5 w-5 text-[#2A2352]" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-[#4A4453]">Языки обучения</h2>
-                    <p className="text-[11px] text-[#8A8493]">
+                    <h2 className="text-sm font-semibold text-[#2A2352]">Языки обучения</h2>
+                    <p className="text-[11px] text-[#7B6FA6]">
                       Шаг перед мини-тестом на уровень
                     </p>
                   </div>
@@ -196,7 +196,7 @@ export function PlacementTestModal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="h-8 w-8 rounded-xl hover:bg-[#F5EFEB] text-[#8A8493] flex items-center justify-center"
+                    className="h-8 w-8 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6] flex items-center justify-center"
                     title="Закрыть"
                   >
                     <X className="h-4 w-4" />
@@ -204,14 +204,14 @@ export function PlacementTestModal({
                 )}
               </div>
 
-              <p className="text-xs text-[#8A8493] leading-relaxed">
+              <p className="text-xs text-[#7B6FA6] leading-relaxed">
                 Выберите ваш родной язык и язык, который хотите изучать. Тест и колоды
                 будут подобраны именно для этой пары.
               </p>
 
               {/* Native language */}
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-[#8A8493] uppercase tracking-wider">
+                <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
                   1. Родной язык:
                 </span>
                 <div className="grid grid-cols-2 gap-2">
@@ -222,17 +222,17 @@ export function PlacementTestModal({
                       onClick={() => handleSelectNative(opt.code)}
                       className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
                         selNative === opt.code
-                          ? "border-[#E0BBE4] bg-white font-medium"
-                          : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
+                          ? "border-[#B7A0F6] bg-white font-medium"
+                          : "border-[#DCD0F5] bg-white hover:border-[#B7A0F6]"
                       }`}
                     >
-                      <span className="text-xs text-[#4A4453] flex items-center gap-2">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#E8E2D9]">
+                      <span className="text-xs text-[#2A2352] flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5]">
                           {opt.badge}
                         </span>
                         <span>{opt.name}</span>
                       </span>
-                      {selNative === opt.code && <Check className="h-3.5 w-3.5 text-[#2A472C]" />}
+                      {selNative === opt.code && <Check className="h-3.5 w-3.5 text-[#1D6B5B]" />}
                     </button>
                   ))}
                 </div>
@@ -240,7 +240,7 @@ export function PlacementTestModal({
 
               {/* Target language */}
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-[#8A8493] uppercase tracking-wider">
+                <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
                   2. Язык изучения:
                 </span>
                 <div className="space-y-2">
@@ -254,17 +254,17 @@ export function PlacementTestModal({
                       }}
                       className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
                         selTarget === opt.code
-                          ? "border-[#E0BBE4] bg-white font-medium"
-                          : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
+                          ? "border-[#B7A0F6] bg-white font-medium"
+                          : "border-[#DCD0F5] bg-white hover:border-[#B7A0F6]"
                       }`}
                     >
-                      <span className="text-xs text-[#4A4453] flex items-center gap-2">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#E8E2D9]">
+                      <span className="text-xs text-[#2A2352] flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5]">
                           {opt.badge}
                         </span>
                         <span>{opt.name}</span>
                       </span>
-                      {selTarget === opt.code && <Check className="h-3.5 w-3.5 text-[#2A472C]" />}
+                      {selTarget === opt.code && <Check className="h-3.5 w-3.5 text-[#1D6B5B]" />}
                     </button>
                   ))}
                 </div>
@@ -285,12 +285,12 @@ export function PlacementTestModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-9 w-9 rounded-2xl bg-[#F5EFEB] flex items-center justify-center">
-                    <GraduationCap className="h-5 w-5 text-[#482C4E]" />
+                  <div className="h-9 w-9 rounded-2xl bg-[#EFE9FC] flex items-center justify-center">
+                    <GraduationCap className="h-5 w-5 text-[#2A2352]" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-[#4A4453]">Мини-тест на уровень</h2>
-                    <p className="text-[11px] text-[#8A8493]">
+                    <h2 className="text-sm font-semibold text-[#2A2352]">Мини-тест на уровень</h2>
+                    <p className="text-[11px] text-[#7B6FA6]">
                       Вопрос {qIndex + 1} из {questions.length}
                     </p>
                   </div>
@@ -299,7 +299,7 @@ export function PlacementTestModal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="h-8 w-8 rounded-xl hover:bg-[#F5EFEB] text-[#8A8493] flex items-center justify-center"
+                    className="h-8 w-8 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6] flex items-center justify-center"
                     title="Закрыть"
                   >
                     <X className="h-4 w-4" />
@@ -308,14 +308,14 @@ export function PlacementTestModal({
               </div>
 
               {/* Progress bar */}
-              <div className="h-1.5 w-full bg-[#F5EFEB] rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-[#EFE9FC] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#E0BBE4] rounded-full transition-all duration-300"
+                  className="h-full bg-[#B7A0F6] rounded-full transition-all duration-300"
                   style={{ width: `${Math.round((qIndex / questions.length) * 100)}%` }}
                 />
               </div>
 
-              <p className="text-sm font-medium text-[#4A4453] leading-relaxed pt-1">
+              <p className="text-sm font-medium text-[#2A2352] leading-relaxed pt-1">
                 {question.text}
               </p>
 
@@ -325,7 +325,7 @@ export function PlacementTestModal({
                     key={i}
                     type="button"
                     onClick={() => handleAnswer(i)}
-                    className="w-full p-3 rounded-2xl border border-[#E8E2D9] bg-white hover:border-[#E0BBE4] hover:bg-[#FDFAFD] active:scale-[0.99] transition-all text-left text-sm text-[#4A4453]"
+                    className="w-full p-3 rounded-2xl border border-[#DCD0F5] bg-white hover:border-[#B7A0F6] hover:bg-[#F8F4FE] active:scale-[0.99] transition-all text-left text-sm text-[#2A2352]"
                   >
                     {opt}
                   </button>
@@ -344,7 +344,7 @@ export function PlacementTestModal({
                 <button
                   type="button"
                   onClick={handleSkip}
-                  className="w-full text-[11px] text-[#8A8493] underline hover:text-[#4A4453] transition-colors"
+                  className="w-full text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors"
                 >
                   Пропустить тест
                 </button>
@@ -356,16 +356,16 @@ export function PlacementTestModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-9 w-9 rounded-2xl bg-[#F5EFEB] flex items-center justify-center">
-                    <GraduationCap className="h-5 w-5 text-[#482C4E]" />
+                  <div className="h-9 w-9 rounded-2xl bg-[#EFE9FC] flex items-center justify-center">
+                    <GraduationCap className="h-5 w-5 text-[#2A2352]" />
                   </div>
-                  <h2 className="text-sm font-semibold text-[#4A4453]">Уровень владения</h2>
+                  <h2 className="text-sm font-semibold text-[#2A2352]">Уровень владения</h2>
                 </div>
                 {canClose && (
                   <button
                     type="button"
                     onClick={onClose}
-                    className="h-8 w-8 rounded-xl hover:bg-[#F5EFEB] text-[#8A8493] flex items-center justify-center"
+                    className="h-8 w-8 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6] flex items-center justify-center"
                     title="Закрыть"
                   >
                     <X className="h-4 w-4" />
@@ -373,7 +373,7 @@ export function PlacementTestModal({
                 )}
               </div>
 
-              <p className="text-xs text-[#8A8493] leading-relaxed">
+              <p className="text-xs text-[#7B6FA6] leading-relaxed">
                 Выберите свой текущий уровень от 0 до 10. По мере обучения уровень будет
                 расти автоматически.
               </p>
@@ -389,8 +389,8 @@ export function PlacementTestModal({
                     }}
                     className={`h-11 rounded-xl border text-sm font-semibold transition-all active:scale-95 ${
                       manualLevel === lvl
-                        ? "border-[#E0BBE4] bg-[#FAF6FB] text-[#482C4E]"
-                        : "border-[#E8E2D9] bg-white text-[#4A4453] hover:border-[#E0BBE4]"
+                        ? "border-[#B7A0F6] bg-[#F0EAFB] text-[#2A2352]"
+                        : "border-[#DCD0F5] bg-white text-[#2A2352] hover:border-[#B7A0F6]"
                     }`}
                   >
                     {lvl}
@@ -400,9 +400,9 @@ export function PlacementTestModal({
 
               <div className="text-center min-h-[32px]">
                 {manualLevel !== null && (
-                  <p className="text-xs text-[#8A8493]">
+                  <p className="text-xs text-[#7B6FA6]">
                     Уровень {manualLevel}/10 ·{" "}
-                    <span className="font-medium text-[#4A4453]">
+                    <span className="font-medium text-[#2A2352]">
                       {proficiencyLabel(manualLevel)}
                     </span>
                   </p>
@@ -422,7 +422,7 @@ export function PlacementTestModal({
                   <button
                     type="button"
                     onClick={() => setStep("questions")}
-                    className="w-full text-[11px] text-[#8A8493] underline hover:text-[#4A4453] transition-colors flex items-center justify-center gap-1"
+                    className="w-full text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors flex items-center justify-center gap-1"
                   >
                     <ArrowLeft className="h-3 w-3" />
                     Вернуться к тесту
@@ -434,33 +434,33 @@ export function PlacementTestModal({
 
           {step === "done" && result && (
             <div className="space-y-4 text-center">
-              <div className="h-14 w-14 rounded-3xl bg-[#C7E5C8] flex items-center justify-center mx-auto">
-                <Check className="h-7 w-7 text-[#2A472C]" />
+              <div className="h-14 w-14 rounded-3xl bg-[#B9EBDD] flex items-center justify-center mx-auto">
+                <Check className="h-7 w-7 text-[#1D6B5B]" />
               </div>
 
               <div>
-                <h2 className="text-lg font-semibold text-[#4A4453]">
+                <h2 className="text-lg font-semibold text-[#2A2352]">
                   {result.mode === "test" ? "Тест пройден!" : "Уровень сохранён!"}
                 </h2>
-                <p className="text-xs text-[#8A8493] mt-1">
+                <p className="text-xs text-[#7B6FA6] mt-1">
                   {result.mode === "test"
                     ? `Правильных ответов: ${result.score} из ${result.total}`
                     : "Уровень выбран вручную"}
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#FAF6FB] border border-[#E0BBE4]">
-                <p className="text-xs text-[#8A8493]">Ваш уровень владения</p>
-                <p className="text-3xl font-bold text-[#482C4E] mt-1">
+              <div className="p-4 rounded-2xl bg-[#F0EAFB] border border-[#B7A0F6]">
+                <p className="text-xs text-[#7B6FA6]">Ваш уровень владения</p>
+                <p className="text-3xl font-bold text-[#2A2352] mt-1">
                   {result.level}
-                  <span className="text-base font-medium text-[#8A8493]">/10</span>
+                  <span className="text-base font-medium text-[#7B6FA6]">/10</span>
                 </p>
-                <p className="text-sm font-medium text-[#4A4453] mt-0.5">
+                <p className="text-sm font-medium text-[#2A2352] mt-0.5">
                   {proficiencyLabel(result.level)}
                 </p>
               </div>
 
-              <p className="text-xs text-[#8A8493] leading-relaxed">
+              <p className="text-xs text-[#7B6FA6] leading-relaxed">
                 Мы подняли подходящие вам колоды наверх списка. Уровень будет расти
                 автоматически по мере выученных слов, а тест можно пройти заново в любой момент.
               </p>

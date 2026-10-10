@@ -83,22 +83,22 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const targetOptions = getTargetOptions(nativeLanguage);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#FDFBF7] animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F4EFFE] animate-in fade-in duration-300">
       <div className="w-full max-w-md space-y-6">
         {/* Progress & Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E0BBE4]/30 text-[#482C4E] text-xs font-medium">
-            <Globe className="h-3.5 w-3.5 text-[#482C4E]" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#B7A0F6]/30 text-[#2A2352] text-xs font-medium">
+            <Globe className="h-3.5 w-3.5 text-[#2A2352]" />
             <span>
               {step === 1 ? "Шаг 1 из 2 • Ona tili" : "Шаг 2 из 2 • O'rganish tili"}
             </span>
           </div>
 
-          <h1 className="text-2xl font-bold text-[#4A4453] tracking-tight">
+          <h1 className="text-2xl font-bold text-[#2A2352] tracking-tight">
             {step === 1 ? "Выберите родной язык" : "Какой язык хотите изучать?"}
           </h1>
 
-          <p className="text-xs text-[#8A8493] max-w-xs mx-auto leading-relaxed">
+          <p className="text-xs text-[#7B6FA6] max-w-xs mx-auto leading-relaxed">
             {step === 1
               ? "Siz gapiradigan yoki tushunadigan asosiy tilingizni tanlang"
               : "Biz siz uchun boshlang'ich bepul darslar va lug'atlarni tayyorlaymiz"}
@@ -113,22 +113,22 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               onClick={() => handleSelectNative("ru")}
               className={`border-2 cursor-pointer transition-all active:scale-[0.98] rounded-2xl shadow-none ${
                 nativeLanguage === "ru"
-                  ? "border-[#E0BBE4] bg-white"
-                  : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
+                  ? "border-[#B7A0F6] bg-white"
+                  : "border-[#DCD0F5] bg-white hover:border-[#B7A0F6]"
               }`}
             >
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <span className="h-10 w-10 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] flex items-center justify-center font-bold text-xs text-[#4A4453] shrink-0">
+                  <span className="h-10 w-10 rounded-xl bg-[#F2ECFC] border border-[#DCD0F5] flex items-center justify-center font-bold text-xs text-[#2A2352] shrink-0">
                     RU
                   </span>
                   <div>
-                    <h3 className="text-sm font-semibold text-[#4A4453]">Русский язык</h3>
-                    <p className="text-xs text-[#8A8493]">Пояснения и правила будут на русском</p>
+                    <h3 className="text-sm font-semibold text-[#2A2352]">Русский язык</h3>
+                    <p className="text-xs text-[#7B6FA6]">Пояснения и правила будут на русском</p>
                   </div>
                 </div>
                 {nativeLanguage === "ru" && (
-                  <div className="h-7 w-7 rounded-full bg-[#C7E5C8] flex items-center justify-center text-[#2A472C]">
+                  <div className="h-7 w-7 rounded-full bg-[#B9EBDD] flex items-center justify-center text-[#1D6B5B]">
                     <Check className="h-4 w-4" />
                   </div>
                 )}
@@ -140,22 +140,22 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               onClick={() => handleSelectNative("uz")}
               className={`border-2 cursor-pointer transition-all active:scale-[0.98] rounded-2xl shadow-none ${
                 nativeLanguage === "uz"
-                  ? "border-[#E0BBE4] bg-white"
-                  : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
+                  ? "border-[#B7A0F6] bg-white"
+                  : "border-[#DCD0F5] bg-white hover:border-[#B7A0F6]"
               }`}
             >
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
-                  <span className="h-10 w-10 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] flex items-center justify-center font-bold text-xs text-[#4A4453] shrink-0">
+                  <span className="h-10 w-10 rounded-xl bg-[#F2ECFC] border border-[#DCD0F5] flex items-center justify-center font-bold text-xs text-[#2A2352] shrink-0">
                     UZ
                   </span>
                   <div>
-                    <h3 className="text-sm font-semibold text-[#4A4453]">O'zbek tili</h3>
-                    <p className="text-xs text-[#8A8493]">Qoidalar va tushuntirishlar o'zbek tilida bo'ladi</p>
+                    <h3 className="text-sm font-semibold text-[#2A2352]">O'zbek tili</h3>
+                    <p className="text-xs text-[#7B6FA6]">Qoidalar va tushuntirishlar o'zbek tilida bo'ladi</p>
                   </div>
                 </div>
                 {nativeLanguage === "uz" && (
-                  <div className="h-7 w-7 rounded-full bg-[#C7E5C8] flex items-center justify-center text-[#2A472C]">
+                  <div className="h-7 w-7 rounded-full bg-[#B9EBDD] flex items-center justify-center text-[#1D6B5B]">
                     <Check className="h-4 w-4" />
                   </div>
                 )}
@@ -183,22 +183,22 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 onClick={() => setTargetLanguage(opt.code)}
                 className={`border-2 cursor-pointer transition-all active:scale-[0.98] rounded-2xl shadow-none ${
                   targetLanguage === opt.code
-                    ? "border-[#E0BBE4] bg-white"
-                    : "border-[#E8E2D9] bg-white hover:border-[#E0BBE4]"
+                    ? "border-[#B7A0F6] bg-white"
+                    : "border-[#DCD0F5] bg-white hover:border-[#B7A0F6]"
                 }`}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3.5">
-                    <span className="h-10 w-10 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] flex items-center justify-center font-bold text-xs text-[#4A4453] shrink-0">
+                    <span className="h-10 w-10 rounded-xl bg-[#F2ECFC] border border-[#DCD0F5] flex items-center justify-center font-bold text-xs text-[#2A2352] shrink-0">
                       {opt.codeBadge}
                     </span>
                     <div>
-                      <h3 className="text-sm font-semibold text-[#4A4453]">{opt.name}</h3>
-                      <p className="text-xs text-[#8A8493]">{opt.subtitle}</p>
+                      <h3 className="text-sm font-semibold text-[#2A2352]">{opt.name}</h3>
+                      <p className="text-xs text-[#7B6FA6]">{opt.subtitle}</p>
                     </div>
                   </div>
                   {targetLanguage === opt.code && (
-                    <div className="h-7 w-7 rounded-full bg-[#C7E5C8] flex items-center justify-center text-[#2A472C]">
+                    <div className="h-7 w-7 rounded-full bg-[#B9EBDD] flex items-center justify-center text-[#1D6B5B]">
                       <Check className="h-4 w-4" />
                     </div>
                   )}
@@ -223,7 +223,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 variant="secondary"
                 size="lg"
                 disabled={isSubmitting}
-                className="flex-1 text-sm font-semibold h-13 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-[#E0BBE4] text-[#482C4E]"
+                className="flex-1 text-sm font-semibold h-13 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-[#B7A0F6] text-[#2A2352]"
               >
                 <Sparkles className="h-4 w-4" />
                 <span>

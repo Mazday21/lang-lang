@@ -305,10 +305,10 @@ export default function HubPage() {
 
   if (isAuthLoading) {
     return (
-      <main className="min-h-screen bg-[#FDFBF7] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
+      <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
         <div className="flex items-center justify-center space-x-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-[#C7E5C8] animate-ping" />
-          <p className="text-xs font-medium text-[#8A8493]">Загрузка профиля...</p>
+          <div className="h-2.5 w-2.5 rounded-full bg-[#B9EBDD] animate-ping" />
+          <p className="text-xs font-medium text-[#7B6FA6]">Загрузка профиля...</p>
         </div>
         <Skeleton className="h-28 w-full rounded-2xl" />
         <Skeleton className="h-32 w-full rounded-2xl" />
@@ -322,7 +322,7 @@ export default function HubPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FDFBF7] text-[#4A4453] px-4 py-6 md:py-10 max-w-lg mx-auto flex flex-col gap-5">
+    <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-6 md:py-10 max-w-lg mx-auto flex flex-col gap-5">
       {/* Placement Mini-Test Modal (language banner → test for new users) */}
       <PlacementTestModal
         isOpen={isTestOpen || needsPlacement}
@@ -361,12 +361,12 @@ export default function HubPage() {
       />
 
       {/* Calm Header with Language Pair Badge */}
-      <header className="flex items-center justify-between pb-2 border-b border-[#E8E2D9]">
+      <header className="flex items-center justify-between pb-2 border-b border-[#DCD0F5]">
         <div>
-          <p className="text-xs font-medium text-[#8A8493] tracking-wide uppercase">
+          <p className="text-xs font-medium text-[#7B6FA6] tracking-wide uppercase">
             Тренажер языков • SM-2
           </p>
-          <h1 className="text-xl font-semibold text-[#4A4453] mt-0.5">
+          <h1 className="text-xl font-semibold text-[#2A2352] mt-0.5">
             {user?.first_name ? `Привет, ${user.first_name}` : "Личный тренажер"}
           </h1>
         </div>
@@ -374,19 +374,19 @@ export default function HubPage() {
           {/* Language Pair Selector Button */}
           <button
             onClick={() => setIsLanguageSwitcherOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E8E2D9] hover:border-[#E0BBE4] active:scale-95 text-xs font-semibold text-[#4A4453] transition-all shadow-none whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#DCD0F5] hover:border-[#B7A0F6] active:scale-95 text-xs font-semibold text-[#2A2352] transition-all shadow-none whitespace-nowrap shrink-0"
             style={{ whiteSpace: "nowrap" }}
             title="Сменить язык обучения"
           >
             <span className="whitespace-nowrap font-bold tracking-wide">{pairLabel}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-[#8A8493] shrink-0" />
+            <ChevronDown className="h-3.5 w-3.5 text-[#7B6FA6] shrink-0" />
           </button>
 
           <Button
             variant="ghost"
             size="icon"
             onClick={() => router.push("/settings")}
-            className="h-9 w-9 rounded-xl hover:bg-[#F5EFEB] text-[#8A8493]"
+            className="h-9 w-9 rounded-xl hover:bg-[#EFE9FC] text-[#7B6FA6]"
             title="Настройки"
           >
             <Settings className="h-4 w-4" />
@@ -396,10 +396,10 @@ export default function HubPage() {
 
       {/* Dev Mode prompt if outside Telegram and not authed */}
       {!isTelegram && !user && (
-        <Card className="border-[#E8E2D9] bg-white">
+        <Card className="border-[#DCD0F5] bg-white">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Terminal className="h-4 w-4 text-[#8A8493]" />
+              <Terminal className="h-4 w-4 text-[#7B6FA6]" />
               Локальная разработка
             </CardTitle>
             <CardDescription className="text-xs">
@@ -420,11 +420,11 @@ export default function HubPage() {
       )}
 
       {/* Today's Overview Banner */}
-      <Card className="border-[#E8E2D9] bg-white shadow-none">
+      <Card className="border-[#DCD0F5] bg-white shadow-none">
         <CardContent className="p-5 flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-xs text-[#8A8493] font-medium">Повторение на сегодня</p>
-            <p className="text-2xl font-semibold text-[#4A4453]">
+            <p className="text-xs text-[#7B6FA6] font-medium">Повторение на сегодня</p>
+            <p className="text-2xl font-semibold text-[#2A2352]">
               {isLoadingDecks
                 ? "..."
                 : remainingToday > 0
@@ -434,21 +434,21 @@ export default function HubPage() {
                 : "Всё повторено!"}
             </p>
             {!isLoadingDecks && totalDue > 0 && (
-              <p className="text-[11px] text-[#8A8493]">
+              <p className="text-[11px] text-[#7B6FA6]">
                 {remainingToday > 0
                   ? `Ещё ${totalDue - remainingToday} можно повторить позже`
                   : `Ещё ${totalDue} ${cardsWord(totalDue)} — повторите позже или завтра`}
               </p>
             )}
             <div className="flex items-center gap-2 pt-0.5 flex-wrap">
-              <span className="text-xs text-[#8A8493] flex items-center gap-1 whitespace-nowrap">
-                <Gauge className="h-3 w-3 text-[#E0BBE4]" />
+              <span className="text-xs text-[#7B6FA6] flex items-center gap-1 whitespace-nowrap">
+                <Gauge className="h-3 w-3 text-[#B7A0F6]" />
                 Уровень владения:{" "}
                 {progress
                   ? `${progress.proficiency_level}/10 · ${proficiencyLabel(progress.proficiency_level)}`
                   : "—"}
                 {progress && progress.proficiency_level > progress.base_level && (
-                  <span className="text-[#2A472C]">
+                  <span className="text-[#1D6B5B]">
                     {" "}
                     (+{progress.proficiency_level - progress.base_level} за обучение)
                   </span>
@@ -457,14 +457,14 @@ export default function HubPage() {
               <button
                 type="button"
                 onClick={() => setIsTestOpen(true)}
-                className="text-[11px] text-[#8A8493] underline hover:text-[#4A4453] transition-colors"
+                className="text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors"
               >
                 {progress?.placement_tested ? "Пройти заново" : "Пройти тест"}
               </button>
             </div>
           </div>
-          <div className="h-12 w-12 rounded-2xl bg-[#F5EFEB] flex items-center justify-center text-[#482C4E]">
-            <Sparkles className="h-6 w-6 text-[#E0BBE4]" />
+          <div className="h-12 w-12 rounded-2xl bg-[#EFE9FC] flex items-center justify-center text-[#2A2352]">
+            <Sparkles className="h-6 w-6 text-[#B7A0F6]" />
           </div>
         </CardContent>
       </Card>
@@ -474,7 +474,7 @@ export default function HubPage() {
         variant="secondary"
         size="lg"
         onClick={() => setIsCreateModalOpen(true)}
-        className="w-full text-sm font-semibold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-[#E0BBE4] text-[#482C4E] hover:bg-[#D7AEDC]"
+        className="w-full text-sm font-semibold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0]"
       >
         <Sparkles className="h-4 w-4" />
         <span>Сгенерировать колоду с помощью AI</span>
@@ -483,13 +483,13 @@ export default function HubPage() {
       {/* Decks Section */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm font-semibold text-[#4A4453]">
+          <h2 className="text-sm font-semibold text-[#2A2352]">
             Колоды для изучения ({pairLabel})
           </h2>
           <button
             onClick={() => fetchDecksAndLimits()}
             disabled={isLoadingDecks}
-            className="text-xs text-[#8A8493] hover:text-[#4A4453] flex items-center gap-1 transition-colors"
+            className="text-xs text-[#7B6FA6] hover:text-[#2A2352] flex items-center gap-1 transition-colors"
           >
             <RefreshCw className={`h-3 w-3 ${isLoadingDecks ? "animate-spin" : ""}`} />
             Обновить
@@ -497,8 +497,8 @@ export default function HubPage() {
         </div>
 
         {error && (
-          <Card className="border-[#F7D6D0] bg-[#FFF8F7]">
-            <CardContent className="p-4 text-xs text-[#6B2E28]">
+          <Card className="border-[#F9D7DD] bg-[#FFF1F3]">
+            <CardContent className="p-4 text-xs text-[#A63A4B]">
               {error}
               <Button
                 variant="outline"
@@ -519,15 +519,15 @@ export default function HubPage() {
           </div>
         ) : decks.length === 0 ? (
           /* Empty State */
-          <Card className="border-[#E8E2D9] bg-white p-8 text-center rounded-3xl shadow-none space-y-4">
-            <div className="h-16 w-16 rounded-2xl bg-[#E0BBE4]/30 mx-auto flex items-center justify-center text-[#482C4E]">
-              <Sparkles className="h-8 w-8 text-[#482C4E]" />
+          <Card className="border-[#DCD0F5] bg-white p-8 text-center rounded-3xl shadow-none space-y-4">
+            <div className="h-16 w-16 rounded-2xl bg-[#B7A0F6]/30 mx-auto flex items-center justify-center text-[#2A2352]">
+              <Sparkles className="h-8 w-8 text-[#2A2352]" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-base font-semibold text-[#4A4453]">
+              <h3 className="text-base font-semibold text-[#2A2352]">
                 У вас пока нет колод для этой языковой пары
               </h3>
-              <p className="text-xs text-[#8A8493] leading-relaxed max-w-xs mx-auto">
+              <p className="text-xs text-[#7B6FA6] leading-relaxed max-w-xs mx-auto">
                 Давайте создадим первую с помощью ИИ! Назовите любую тему — от приветствий до покупок.
               </p>
             </div>
@@ -548,19 +548,19 @@ export default function HubPage() {
             {levelGroups.map((level) => (
               <div key={level} className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-[#8A8493] uppercase tracking-wider whitespace-nowrap">
+                  <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider whitespace-nowrap">
                     Уровень {level} · {levelName(level)}
                   </span>
                   {level === recommendedLevel && (
                     <Badge
                       variant="outline"
-                      className="text-[10px] py-0 px-1.5 font-normal text-[#2A472C] border-[#C7E5C8] bg-[#F2FAF3] whitespace-nowrap"
+                      className="text-[10px] py-0 px-1.5 font-normal text-[#1D6B5B] border-[#B9EBDD] bg-[#E3F7EF] whitespace-nowrap"
                     >
                       Рекомендуем
                     </Badge>
                   )}
-                  <div className="flex-1 h-px bg-[#E8E2D9]" />
-                  <span className="text-[11px] text-[#8A8493] whitespace-nowrap">
+                  <div className="flex-1 h-px bg-[#DCD0F5]" />
+                  <span className="text-[11px] text-[#7B6FA6] whitespace-nowrap">
                     {decksByLevel[level].length} колод
                   </span>
                 </div>
@@ -570,23 +570,23 @@ export default function HubPage() {
                 <Card
                   key={deck.id}
                   onClick={() => router.push(`/train/${deck.id}`)}
-                  className="border-[#E8E2D9] bg-white hover:border-[#E0BBE4] active:scale-[0.99] transition-all cursor-pointer rounded-2xl shadow-none group"
+                  className="border-[#DCD0F5] bg-white hover:border-[#B7A0F6] active:scale-[0.99] transition-all cursor-pointer rounded-2xl shadow-none group"
                 >
                   <CardContent className="p-5 flex items-center justify-between gap-3">
                     <div className="space-y-1.5 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm font-semibold text-[#4A4453] truncate">
+                        <h3 className="text-sm font-semibold text-[#2A2352] truncate">
                           {deck.title}
                         </h3>
                         <Badge
                           variant="outline"
-                          className="text-[10px] py-0 px-1.5 font-normal text-[#482C4E] border-[#E0BBE4] bg-[#FAF6FB] whitespace-nowrap"
+                          className="text-[10px] py-0 px-1.5 font-normal text-[#2A2352] border-[#B7A0F6] bg-[#F0EAFB] whitespace-nowrap"
                         >
                           Уровень {deck.level || 1} · {levelName(deck.level || 1)}
                         </Badge>
                       </div>
                       {deck.description && (
-                        <p className="text-xs text-[#8A8493] line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-[#7B6FA6] line-clamp-2 leading-relaxed">
                           {deck.description}
                         </p>
                       )}
@@ -596,12 +596,12 @@ export default function HubPage() {
                             {deck.due_cards} к повторению
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[11px] text-[#8A8493] flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3 text-[#2A472C]" />
+                          <Badge variant="outline" className="text-[11px] text-[#7B6FA6] flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 text-[#1D6B5B]" />
                             Все {deck.total_cards} слов повторены
                           </Badge>
                         )}
-                        <span className="text-[11px] text-[#8A8493]">
+                        <span className="text-[11px] text-[#7B6FA6]">
                           Всего: {deck.total_cards}
                         </span>
                       </div>
@@ -614,13 +614,13 @@ export default function HubPage() {
                           e.stopPropagation();
                           handleDeleteDeck(deck.id);
                         }}
-                        className="h-8 w-8 rounded-xl hover:bg-[#FFF3F0] text-[#8A8493] hover:text-[#6B2E28] transition-colors flex items-center justify-center opacity-70 hover:opacity-100"
+                        className="h-8 w-8 rounded-xl hover:bg-[#FFECF0] text-[#7B6FA6] hover:text-[#A63A4B] transition-colors flex items-center justify-center opacity-70 hover:opacity-100"
                         title="Удалить колоду"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
 
-                      <div className="h-9 w-9 rounded-xl bg-[#FAF7F2] flex items-center justify-center text-[#8A8493]">
+                      <div className="h-9 w-9 rounded-xl bg-[#F2ECFC] flex items-center justify-center text-[#7B6FA6]">
                         <ChevronRight className="h-4 w-4" />
                       </div>
                     </div>

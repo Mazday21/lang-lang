@@ -72,51 +72,51 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token }: PaywallMo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/35 backdrop-blur-[2px] animate-in fade-in duration-200">
-      <Card className="w-full max-w-md border-[#E8E2D9] bg-[#FDFBF7] rounded-3xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <Card className="w-full max-w-md border-[#DCD0F5] bg-[#F4EFFE] rounded-3xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
         <CardHeader className="text-center pt-7 pb-3 px-6 space-y-2">
-          <div className="h-14 w-14 rounded-2xl bg-[#E0BBE4]/30 text-[#482C4E] flex items-center justify-center mx-auto">
-            <Sparkles className="h-7 w-7 text-[#482C4E]" />
+          <div className="h-14 w-14 rounded-2xl bg-[#B7A0F6]/30 text-[#2A2352] flex items-center justify-center mx-auto">
+            <Sparkles className="h-7 w-7 text-[#2A2352]" />
           </div>
           <Badge variant="secondary" className="mx-auto text-[11px] font-medium">
             Лимит исчерпан
           </Badge>
-          <CardTitle className="text-lg font-semibold text-[#4A4453]">
+          <CardTitle className="text-lg font-semibold text-[#2A2352]">
             Дневной лимит AI-проверок исчерпан
           </CardTitle>
-          <CardDescription className="text-xs text-[#8A8493] leading-relaxed">
+          <CardDescription className="text-xs text-[#7B6FA6] leading-relaxed">
             Бесплатные 20 проверок на сегодня подошли к концу. Возвращайтесь завтра или разблокируйте безлимит, чтобы продолжить прямо сейчас.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4 px-6 pb-6 pt-0">
           {/* Plan Perks */}
-          <div className="p-4 rounded-2xl bg-white border border-[#E8E2D9] space-y-2.5">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#4A4453]">
-              <span className="text-[#C7E5C8] font-bold">●</span>
+          <div className="p-4 rounded-2xl bg-white border border-[#DCD0F5] space-y-2.5">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#2A2352]">
+              <span className="text-[#B9EBDD] font-bold">●</span>
               <span>Возможности тарифа Pro:</span>
             </div>
-            <ul className="text-xs text-[#4A4453] space-y-2">
+            <ul className="text-xs text-[#2A2352] space-y-2">
               <li className="flex items-start gap-2">
-                <Check className="h-3.5 w-3.5 text-[#2A472C] shrink-0 mt-0.5" />
+                <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
                 <span>Безлимитная проверка ответов ИИ-репетитором</span>
               </li>
               <li className="flex items-start gap-2">
-                <Check className="h-3.5 w-3.5 text-[#2A472C] shrink-0 mt-0.5" />
+                <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
                 <span>Динамическая генерация контекста для каждого правила</span>
               </li>
               <li className="flex items-start gap-2">
-                <Check className="h-3.5 w-3.5 text-[#2A472C] shrink-0 mt-0.5" />
+                <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
                 <span>Создание персональных колод по любой теме</span>
               </li>
               <li className="flex items-start gap-2">
-                <Check className="h-3.5 w-3.5 text-[#2A472C] shrink-0 mt-0.5" />
+                <Check className="h-3.5 w-3.5 text-[#1D6B5B] shrink-0 mt-0.5" />
                 <span>Умное распознавание речи Whisper без ограничений</span>
               </li>
             </ul>
           </div>
 
           {checkoutNotice && (
-            <div className="text-xs text-[#2A472C] bg-[#C7E5C8]/40 border border-[#C7E5C8] p-3 rounded-xl text-center animate-in fade-in">
+            <div className="text-xs text-[#1D6B5B] bg-[#B9EBDD]/40 border border-[#B9EBDD] p-3 rounded-xl text-center animate-in fade-in">
               {checkoutNotice}
             </div>
           )}
@@ -153,7 +153,7 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token }: PaywallMo
             {/* Dev reset shortcut */}
             <button
               onClick={handleReset}
-              className="w-full text-[11px] text-[#8A8493] hover:text-[#4A4453] flex items-center justify-center gap-1 pt-1 underline transition-colors"
+              className="w-full text-[11px] text-[#7B6FA6] hover:text-[#2A2352] flex items-center justify-center gap-1 pt-1 underline transition-colors"
             >
               <RefreshCw className="h-3 w-3" />
               <span>Сбросить лимит (Тест для разработки)</span>

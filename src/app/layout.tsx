@@ -14,7 +14,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#FDFBF7",
+  themeColor: "#F4EFFE",
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
       <head>
         <TelegramScript />
       </head>
-      <body className="min-h-screen bg-[#FDFBF7] text-[#4A4453] antialiased selection:bg-[#E0BBE4] selection:text-[#482C4E]">
+      <body className="min-h-screen bg-[#F4EFFE] text-[#2A2352] antialiased selection:bg-[#B7A0F6] selection:text-[#2A2352]">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

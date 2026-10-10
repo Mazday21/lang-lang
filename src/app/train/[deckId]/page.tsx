@@ -344,10 +344,10 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[#FDFBF7] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
+      <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
         <div className="flex items-center justify-center space-x-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-[#E0BBE4] animate-ping" />
-          <p className="text-xs font-medium text-[#8A8493]">Загрузка карточек...</p>
+          <div className="h-2.5 w-2.5 rounded-full bg-[#B7A0F6] animate-ping" />
+          <p className="text-xs font-medium text-[#7B6FA6]">Загрузка карточек...</p>
         </div>
         <Skeleton className="h-48 w-full rounded-2xl" />
         <Skeleton className="h-12 w-full rounded-2xl" />
@@ -357,11 +357,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   if (error && !currentCard) {
     return (
-      <main className="min-h-screen bg-[#FDFBF7] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
-        <Card className="border-[#F7D6D0] bg-[#FFF8F7]">
+      <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
+        <Card className="border-[#F9D7DD] bg-[#FFF1F3]">
           <CardContent className="p-6 text-center space-y-3">
-            <p className="text-sm font-semibold text-[#6B2E28]">Ошибка</p>
-            <p className="text-xs text-[#8A8493]">{error}</p>
+            <p className="text-sm font-semibold text-[#A63A4B]">Ошибка</p>
+            <p className="text-xs text-[#7B6FA6]">{error}</p>
             <Button variant="outline" size="sm" onClick={() => router.push("/")}>
               Вернуться на главную
             </Button>
@@ -373,11 +373,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
   if (cards.length === 0) {
     return (
-      <main className="min-h-screen bg-[#FDFBF7] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
-        <Card className="border-[#E8E2D9] bg-white p-6 text-center space-y-3">
-          <CheckCircle2 className="h-10 w-10 text-[#2A472C] mx-auto opacity-70" />
-          <h2 className="text-base font-semibold text-[#4A4453]">Карточки не найдены</h2>
-          <p className="text-xs text-[#8A8493]">В этой колоде пока нет карточек для тренировки.</p>
+      <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
+        <Card className="border-[#DCD0F5] bg-white p-6 text-center space-y-3">
+          <CheckCircle2 className="h-10 w-10 text-[#1D6B5B] mx-auto opacity-70" />
+          <h2 className="text-base font-semibold text-[#2A2352]">Карточки не найдены</h2>
+          <p className="text-xs text-[#7B6FA6]">В этой колоде пока нет карточек для тренировки.</p>
           <Button variant="outline" size="sm" onClick={() => router.push("/")}>
             Вернуться на главную
           </Button>
@@ -389,18 +389,18 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   // Session Completed State
   if (isFinished) {
     return (
-      <main className="min-h-screen bg-[#FDFBF7] p-6 max-w-lg mx-auto flex flex-col justify-center gap-5">
-        <Card className="border-[#E8E2D9] bg-white text-center p-8 space-y-4 rounded-2xl shadow-none">
-          <div className="h-16 w-16 rounded-full bg-[#C7E5C8] mx-auto flex items-center justify-center">
-            <CheckCircle2 className="h-8 w-8 text-[#2A472C]" />
+      <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-5">
+        <Card className="border-[#DCD0F5] bg-white text-center p-8 space-y-4 rounded-2xl shadow-none">
+          <div className="h-16 w-16 rounded-full bg-[#B9EBDD] mx-auto flex items-center justify-center">
+            <CheckCircle2 className="h-8 w-8 text-[#1D6B5B]" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-[#4A4453]">Тренировка завершена!</h2>
-            <p className="text-xs text-[#8A8493] leading-relaxed">
+            <h2 className="text-lg font-semibold text-[#2A2352]">Тренировка завершена!</h2>
+            <p className="text-xs text-[#7B6FA6] leading-relaxed">
               Повторено карточек: {reviewedCount}. Все интервалы повторения пересчитаны по алгоритму SM-2.
             </p>
             {sessionLevel !== null && (
-              <p className="text-xs text-[#4A4453] font-medium pt-1">
+              <p className="text-xs text-[#2A2352] font-medium pt-1">
                 Уровень владения: {sessionLevel}/10
               </p>
             )}
@@ -431,7 +431,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   const progressPercent = Math.round(((currentIndex) / cards.length) * 100);
 
   return (
-    <main className="min-h-screen bg-[#FDFBF7] text-[#4A4453] px-4 py-5 max-w-lg mx-auto flex flex-col gap-4">
+    <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-5 max-w-lg mx-auto flex flex-col gap-4">
       {/* Paywall Modal */}
       <PaywallModal
         isOpen={showPaywall}
@@ -444,62 +444,62 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.push("/")}
-            className="flex items-center gap-1 text-xs text-[#8A8493] hover:text-[#4A4453] transition-colors -ml-1 p-1"
+            className="flex items-center gap-1 text-xs text-[#7B6FA6] hover:text-[#2A2352] transition-colors -ml-1 p-1"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>В хаб</span>
           </button>
-          <span className="text-xs font-medium text-[#8A8493]">
+          <span className="text-xs font-medium text-[#7B6FA6]">
             {currentIndex + 1} из {cards.length}
           </span>
         </div>
 
         {/* Soft Progress Bar */}
-        <div className="w-full bg-[#E8E2D9] h-1.5 rounded-full overflow-hidden">
+        <div className="w-full bg-[#DCD0F5] h-1.5 rounded-full overflow-hidden">
           <div
-            className="bg-[#C7E5C8] h-full transition-all duration-300 rounded-full"
+            className="bg-[#B9EBDD] h-full transition-all duration-300 rounded-full"
             style={{ width: `${Math.max(5, progressPercent)}%` }}
           />
         </div>
 
         <div>
-          <p className="text-[11px] uppercase tracking-wider text-[#8A8493] font-medium">
+          <p className="text-[11px] uppercase tracking-wider text-[#7B6FA6] font-medium">
             Колода
           </p>
-          <h1 className="text-base font-semibold text-[#4A4453] truncate">
+          <h1 className="text-base font-semibold text-[#2A2352] truncate">
             {deckTitle}
           </h1>
         </div>
       </header>
 
       {/* Main Flashcard */}
-      <Card className="border-[#E8E2D9] bg-white rounded-2xl shadow-none">
+      <Card className="border-[#DCD0F5] bg-white rounded-2xl shadow-none">
         <CardContent className="p-6 space-y-4">
           {/* Question */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-medium text-[#8A8493] uppercase tracking-wider">
+            <span className="text-[11px] font-medium text-[#7B6FA6] uppercase tracking-wider">
               Задание
             </span>
-            <p className="text-xl font-medium text-[#4A4453] leading-snug">
+            <p className="text-xl font-medium text-[#2A2352] leading-snug">
               {currentCard.front}
             </p>
           </div>
 
           {/* Evaluated Result when revealed */}
           {viewMode === "evaluated" && (
-            <div className="pt-3 border-t border-[#F5EFEB] space-y-3 animate-in fade-in duration-200">
+            <div className="pt-3 border-t border-[#EFE9FC] space-y-3 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-[#8A8493]">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[#7B6FA6]">
                   Результат
                 </span>
                 {isCorrectResult ? (
                   <Badge variant="default" className="text-[11px] font-medium flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3 text-[#2A472C]" />
+                    <CheckCircle2 className="h-3 w-3 text-[#1D6B5B]" />
                     Верно
                   </Badge>
                 ) : (
                   <Badge variant="peach" className="text-[11px] font-medium flex items-center gap-1">
-                    <XCircle className="h-3 w-3 text-[#6B2E28]" />
+                    <XCircle className="h-3 w-3 text-[#A63A4B]" />
                     Есть ошибка
                   </Badge>
                 )}
@@ -507,29 +507,29 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
               {/* Expected answer */}
               <div className="space-y-1">
-                <span className="text-[11px] font-medium text-[#2A472C] uppercase tracking-wider">
+                <span className="text-[11px] font-medium text-[#1D6B5B] uppercase tracking-wider">
                   Правильный ответ
                 </span>
-                <p className="text-lg font-semibold text-[#2A472C]">
+                <p className="text-lg font-semibold text-[#1D6B5B]">
                   {currentCard.back}
                 </p>
               </div>
 
               {/* User answer if wrong */}
               {!isCorrectResult && userAnswer.trim() && (
-                <div className="text-xs text-[#8A8493] pt-0.5">
-                  Ваш ответ: <span className="text-[#6B2E28] font-medium line-through">{userAnswer}</span>
+                <div className="text-xs text-[#7B6FA6] pt-0.5">
+                  Ваш ответ: <span className="text-[#A63A4B] font-medium line-through">{userAnswer}</span>
                 </div>
               )}
 
               {/* Grammar rule explanation */}
               {currentCard.rule_description && (
-                <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-[#482C4E]">
-                    <Lightbulb className="h-3.5 w-3.5 text-[#E0BBE4]" />
+                <div className="p-3.5 rounded-xl bg-[#F2ECFC] border border-[#DCD0F5] space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-[#2A2352]">
+                    <Lightbulb className="h-3.5 w-3.5 text-[#B7A0F6]" />
                     <span>Грамматическое правило</span>
                   </div>
-                  <p className="text-xs text-[#4A4453] leading-relaxed">
+                  <p className="text-xs text-[#2A2352] leading-relaxed">
                     {currentCard.rule_description}
                   </p>
                 </div>
@@ -539,14 +539,14 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
           {/* Voice Attempt 1 Failed notice */}
           {viewMode === "voice_retry" && (
-            <div className="pt-3 border-t border-[#F5EFEB] space-y-2.5 animate-in fade-in duration-200">
-              <div className="p-4 rounded-2xl bg-[#FFF8F7] border border-[#F7D6D0] space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#6B2E28]">
-                  <AlertTriangle className="h-4 w-4 text-[#D9776E]" />
+            <div className="pt-3 border-t border-[#EFE9FC] space-y-2.5 animate-in fade-in duration-200">
+              <div className="p-4 rounded-2xl bg-[#FFF1F3] border border-[#F9D7DD] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#A63A4B]">
+                  <AlertTriangle className="h-4 w-4 text-[#E06B7B]" />
                   <span>Текст не совпал с карточкой</span>
                 </div>
-                <p className="text-xs text-[#4A4453] leading-relaxed">
-                  Распознано: <span className="font-semibold text-[#6B2E28]">«{userAnswer}»</span>.
+                <p className="text-xs text-[#2A2352] leading-relaxed">
+                  Распознано: <span className="font-semibold text-[#A63A4B]">«{userAnswer}»</span>.
                   Возможно, микрофон срезал звук или была опечатка. Вы можете наговорить ответ еще раз.
                 </p>
               </div>
@@ -555,14 +555,14 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
           {/* Voice Attempt 2 Failed notice -> Manual correction mode */}
           {viewMode === "manual_correction" && (
-            <div className="pt-3 border-t border-[#F5EFEB] space-y-2.5 animate-in fade-in duration-200">
-              <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8E2D9] space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#482C4E]">
-                  <AlertTriangle className="h-4 w-4 text-[#E0BBE4]" />
+            <div className="pt-3 border-t border-[#EFE9FC] space-y-2.5 animate-in fade-in duration-200">
+              <div className="p-4 rounded-2xl bg-[#F2ECFC] border border-[#DCD0F5] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#2A2352]">
+                  <AlertTriangle className="h-4 w-4 text-[#B7A0F6]" />
                   <span>Ручная корректировка (Микрофон заблокирован)</span>
                 </div>
-                <p className="text-xs text-[#8A8493] leading-relaxed">
-                  Мы услышали: <span className="font-semibold text-[#4A4453]">«{userAnswer}»</span>.
+                <p className="text-xs text-[#7B6FA6] leading-relaxed">
+                  Мы услышали: <span className="font-semibold text-[#2A2352]">«{userAnswer}»</span>.
                   Подправьте пару букв в поле ввода ниже или подтвердите ответ как есть.
                 </p>
               </div>
@@ -573,16 +573,16 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
       {/* Mic error notice if any */}
       {(micError || permissionDenied) && (
-        <div className="text-xs text-[#6B2E28] bg-[#FFF8F7] border border-[#F7D6D0] p-3 rounded-xl">
+        <div className="text-xs text-[#A63A4B] bg-[#FFF1F3] border border-[#F9D7DD] p-3 rounded-xl">
           {micError}
         </div>
       )}
 
       {/* Recording status pill */}
       {isRecording && (
-        <div className="flex items-center justify-center gap-2 p-3 bg-[#FFF3F0] border border-[#F7D6D0] rounded-2xl animate-pulse">
-          <div className="h-2.5 w-2.5 rounded-full bg-[#D9776E]" />
-          <p className="text-xs font-medium text-[#6B2E28]">
+        <div className="flex items-center justify-center gap-2 p-3 bg-[#FFECF0] border border-[#F9D7DD] rounded-2xl animate-pulse">
+          <div className="h-2.5 w-2.5 rounded-full bg-[#E06B7B]" />
+          <p className="text-xs font-medium text-[#A63A4B]">
             Идет запись голоса... Нажмите кнопку для остановки
           </p>
         </div>
@@ -590,9 +590,9 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
 
       {/* Transcribing status */}
       {isTranscribing && (
-        <div className="flex items-center justify-center gap-2 p-3 bg-[#FAF7F2] border border-[#E8E2D9] rounded-2xl">
-          <Loader2 className="h-3.5 w-3.5 text-[#E0BBE4] animate-spin" />
-          <p className="text-xs font-medium text-[#8A8493]">
+        <div className="flex items-center justify-center gap-2 p-3 bg-[#F2ECFC] border border-[#DCD0F5] rounded-2xl">
+          <Loader2 className="h-3.5 w-3.5 text-[#B7A0F6] animate-spin" />
+          <p className="text-xs font-medium text-[#7B6FA6]">
             Распознаем речь (Gemini)...
           </p>
         </div>
@@ -608,7 +608,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
           className="space-y-3 mt-auto pt-2"
         >
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#8A8493] px-1">
+            <label className="text-xs font-medium text-[#7B6FA6] px-1">
               Ваш перевод или ответ:
             </label>
             <div className="flex gap-2">
@@ -637,9 +637,9 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
                 }
               >
                 {isRecording ? (
-                  <Square className="h-4 w-4 text-[#6B2E28] fill-current" />
+                  <Square className="h-4 w-4 text-[#A63A4B] fill-current" />
                 ) : (
-                  <Mic className={`h-4 w-4 ${voiceAttempts >= 2 ? "text-[#8A8493] opacity-40" : "text-[#4A4453]"}`} />
+                  <Mic className={`h-4 w-4 ${voiceAttempts >= 2 ? "text-[#7B6FA6] opacity-40" : "text-[#2A2352]"}`} />
                 )}
               </Button>
             </div>
@@ -669,13 +669,13 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             onClick={toggleRecording}
             className={`w-full text-xs sm:text-sm font-semibold h-13 rounded-2xl flex items-center justify-center gap-2 ${
               isRecording
-                ? "bg-[#FFF3F0] text-[#6B2E28] border border-[#F7D6D0]"
-                : "bg-[#E0BBE4] text-[#482C4E]"
+                ? "bg-[#FFECF0] text-[#A63A4B] border border-[#F9D7DD]"
+                : "bg-[#B7A0F6] text-[#2A2352]"
             }`}
           >
             {isRecording ? (
               <>
-                <Square className="h-4 w-4 text-[#6B2E28] fill-current" />
+                <Square className="h-4 w-4 text-[#A63A4B] fill-current" />
                 <span>Остановить запись</span>
               </>
             ) : (
@@ -695,7 +695,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               setViewMode("manual_correction");
               setTimeout(() => inputRef.current?.focus(), 100);
             }}
-            className="w-full text-xs text-[#8A8493]"
+            className="w-full text-xs text-[#7B6FA6]"
           >
             Ввести ответ текстом
           </Button>
@@ -706,7 +706,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       {viewMode === "manual_correction" && (
         <div className="space-y-3 mt-auto pt-2 animate-in fade-in duration-200">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#8A8493] px-1">
+            <label className="text-xs font-medium text-[#7B6FA6] px-1">
               Отредактируйте распознанный текст:
             </label>
             <Input
@@ -748,7 +748,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       {/* View Mode: Evaluated -> Show SM-2 4-button rating block */}
       {viewMode === "evaluated" && (
         <div className="space-y-2.5 mt-auto pt-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <p className="text-xs font-medium text-center text-[#8A8493]">
+          <p className="text-xs font-medium text-center text-[#7B6FA6]">
             Оцените, насколько легко было вспомнить:
           </p>
           <div className="grid grid-cols-4 gap-2">
@@ -773,7 +773,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               className="flex flex-col h-16 py-2 px-1 rounded-xl"
             >
               <span className="text-xs font-semibold">Трудно</span>
-              <span className="text-[10px] text-[#8A8493] font-normal">С трудом</span>
+              <span className="text-[10px] text-[#7B6FA6] font-normal">С трудом</span>
             </Button>
 
             {/* Good (3) */}
@@ -785,7 +785,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               className="flex flex-col h-16 py-2 px-1 rounded-xl"
             >
               <span className="text-xs font-semibold">Хорошо</span>
-              <span className="text-[10px] text-[#482C4E] opacity-80 font-normal">Нормально</span>
+              <span className="text-[10px] text-[#2A2352] opacity-80 font-normal">Нормально</span>
             </Button>
 
             {/* Easy (4) */}
@@ -797,7 +797,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
               className="flex flex-col h-16 py-2 px-1 rounded-xl"
             >
               <span className="text-xs font-semibold">Легко</span>
-              <span className="text-[10px] text-[#2A472C] opacity-80 font-normal">Сразу</span>
+              <span className="text-[10px] text-[#1D6B5B] opacity-80 font-normal">Сразу</span>
             </Button>
           </div>
         </div>

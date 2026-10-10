@@ -8,15 +8,15 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[#C7E5C8] text-[#2A472C]",
+          "bg-[#B9EBDD] text-[#1D6B5B]",
         secondary:
-          "bg-[#E0BBE4] text-[#482C4E]",
+          "bg-[#B7A0F6] text-[#2A2352]",
         outline:
-          "border border-[#E8E2D9] text-[#4A4453] bg-white",
+          "border border-[#DCD0F5] text-[#2A2352] bg-white",
         muted:
-          "bg-[#F5EFEB] text-[#8A8493]",
+          "bg-[#EFE9FC] text-[#7B6FA6]",
         peach:
-          "bg-[#F7D6D0] text-[#6B2E28]",
+          "bg-[#F9D7DD] text-[#A63A4B]",
       },
     },
     defaultVariants: {
