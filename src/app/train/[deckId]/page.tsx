@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { CardItem } from "@/lib/data/decks";
 import { SM2Grade } from "@/lib/sm2";
+import { canonicalForm } from "@/lib/utils/translit";
 import { useAudioRecorder } from "@/hooks/use-audio-recorder";
 import { PaywallModal } from "@/components/paywall-modal";
 import { DailyLimitModal } from "@/components/daily-limit-modal";
@@ -43,6 +44,7 @@ function normalizeAnswer(text: string): string {
 /**
  * Checks answer strictly locally without LLM calls.
  * Supports multiple valid options separated by '/', ',', or ';'.
+ * Accepts Cyrillic or Latin spelling of the same word: "Рахмат" matches "Rahmat".
  */
 function checkAnswerLocally(userInput: string, expectedAnswer: string): boolean {
   const normUser = normalizeAnswer(userInput);
@@ -58,7 +60,15 @@ function checkAnswerLocally(userInput: string, expectedAnswer: string): boolean 
     .map(normalizeAnswer)
     .filter(Boolean);
 
-  return alternatives.includes(normUser);
+  if (alternatives.includes(normUser)) return true;
+
+  // Translit-tolerant comparison ("Рахмат" ↔ "Rahmat", "йўл" ↔ "Yo'l")
+  const canonUser = canonicalForm(userInput);
+  if (!canonUser) return false;
+
+  return [normExpected, ...alternatives, expectedAnswer].some(
+    (form) => canonicalForm(form) === canonUser
+  );
 }
 
 export default function TrainPage({ params }: { params: Promise<{ deckId: string }> }) {
@@ -625,9 +635,14 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
           className="space-y-3 mt-auto pt-2"
         >
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#7B6FA6] px-1">
-              Ваш перевод или ответ:
-            </label>
+            <div className="flex items-center justify-between px-1 gap-2">
+              <label className="text-xs font-medium text-[#7B6FA6] whitespace-nowrap">
+                Ваш перевод или ответ:
+              </label>
+              <span className="text-[10px] text-[#7B6FA6] text-right">
+                можно писать латиницей или кириллицей
+              </span>
+            </div>
             <div className="flex gap-2">
               <Input
                 ref={inputRef}
