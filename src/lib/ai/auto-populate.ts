@@ -15,6 +15,11 @@ import {
   countUserAiDecksSince,
   DeckItem,
 } from "@/lib/data/decks";
+import {
+  buildAiTemplateMeta,
+  findCachedPayload,
+  saveCachedPayload,
+} from "@/lib/data/ai-deck-cache";
 import { hashContent } from "@/lib/utils/hash";
 import { normalizePairKey } from "@/lib/utils/language";
 
@@ -40,6 +45,75 @@ export const TARGET_SHARED_DECKS_PER_PAIR = 12;
 const DUE_TARGET = 15;
 /** Max personal AI decks per user per day (budget guard). */
 const MAX_PERSONAL_AI_DECKS_PER_DAY = 1;
+
+/**
+ * Cache-aware topic map generation: when the same curriculum request was
+ * answered before, the stored topic map is reused — zero AI calls.
+ */
+async function getOrGenerateTopics(
+  native: string,
+  target: string,
+  count: number
+): Promise<CurriculumTopic[]> {
+  const meta = buildAiTemplateMeta("topics", native, target, count, "curriculum-map");
+  const cached = await findCachedPayload<CurriculumTopic[]>(meta.request_hash);
+  if (cached && cached.length > 0) return cached;
+
+  const topics = await generateTopicsForPair(native, target, count);
+  if (topics.length > 0) await saveCachedPayload(meta, topics);
+  return topics;
+}
+
+/**
+ * Cache-aware deck generation: an identical request (pair + level + topic)
+ * returns an already generated deck from the template base instead of a real
+ * AI call. Fresh misses are stored as reusable templates.
+ */
+async function getOrGenerateTopicDeck(
+  topic: CurriculumTopic,
+  native: string,
+  target: string
+): Promise<GeneratedDeckResult | null> {
+  const meta = buildAiTemplateMeta("deck", native, target, topic.level, topic.title);
+  const cached = await findCachedPayload<GeneratedDeckResult>(meta.request_hash);
+  if (cached && Array.isArray(cached.cards) && cached.cards.length > 0) {
+    return {
+      ...cached,
+      deck_name: cached.deck_name || topic.title,
+      description: cached.description || topic.description,
+      target_language: target,
+      level: topic.level,
+    };
+  }
+
+  const deck = await generateDeckForTopic(topic, native, target);
+  if (deck && deck.cards.length > 0) await saveCachedPayload(meta, deck);
+  return deck;
+}
+
+/** Cache-aware reinforcement deck generation (keyed by the weak words set). */
+async function getOrGenerateReinforcementDeck(
+  weakCards: WeakCard[],
+  native: string,
+  target: string,
+  level: number
+): Promise<GeneratedDeckResult | null> {
+  const subject =
+    "reinforce:" +
+    weakCards
+      .map((c) => c.front.trim().toLowerCase())
+      .sort()
+      .join("|");
+  const meta = buildAiTemplateMeta("deck", native, target, level, subject);
+  const cached = await findCachedPayload<GeneratedDeckResult>(meta.request_hash);
+  if (cached && Array.isArray(cached.cards) && cached.cards.length > 0) {
+    return { ...cached, target_language: target, level };
+  }
+
+  const deck = await generateReinforcementDeck(weakCards, native, target, level);
+  if (deck && deck.cards.length > 0) await saveCachedPayload(meta, deck);
+  return deck;
+}
 
 function sharedContentHash(native: string, target: string, topic: CurriculumTopic): string {
   return `curriculum:${normalizePairKey(`${native}-${target}`)}:lvl${topic.level}:${hashContent(
@@ -80,7 +154,7 @@ export async function ensureSharedCurriculum(params: {
     return { created: 0, skipped: existingCount };
   }
 
-  const topics = await generateTopicsForPair(
+  const topics = await getOrGenerateTopics(
     native,
     target,
     Math.min(6, TARGET_SHARED_DECKS_PER_PAIR - existingCount + 1)
@@ -93,7 +167,7 @@ export async function ensureSharedCurriculum(params: {
 
     const contentHash = sharedContentHash(native, target, topic);
 
-    const deckData: GeneratedDeckResult | null = await generateDeckForTopic(topic, native, target);
+    const deckData: GeneratedDeckResult | null = await getOrGenerateTopicDeck(topic, native, target);
     if (!deckData || deckData.cards.length === 0) {
       skipped++;
       continue;
@@ -159,7 +233,7 @@ export async function topUpPersonalDecks(params: {
 
   // 3. Generate reinforcement deck (from weak cards) or fresh topic deck
   const deckData: GeneratedDeckResult | null = struggling
-    ? await generateReinforcementDeck(weakCards, native, target)
+    ? await getOrGenerateReinforcementDeck(weakCards, native, target, 1)
     : await generateFreshTopicDeck(native, target, decks);
 
   if (!deckData || deckData.cards.length === 0) {
@@ -187,11 +261,11 @@ async function generateFreshTopicDeck(
   target: string,
   existingDecks: DeckItem[]
 ): Promise<GeneratedDeckResult | null> {
-  const topics = await generateTopicsForPair(native, target, 6);
+  const topics = await getOrGenerateTopics(native, target, 6);
   const usedTitles = new Set(existingDecks.map((d) => d.title.toLowerCase().trim()));
 
   const freshTopic = topics.find((t) => !usedTitles.has(t.title.toLowerCase().trim()));
   if (!freshTopic) return null;
 
-  return generateDeckForTopic(freshTopic, native, target);
+  return getOrGenerateTopicDeck(freshTopic, native, target);
 }

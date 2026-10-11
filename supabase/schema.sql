@@ -116,6 +116,28 @@ alter table public.today_queue add column if not exists queued_date text not nul
 create index if not exists idx_today_queue_user_date on public.today_queue(user_id, queued_date);
 create unique index if not exists idx_today_queue_user_card_date on public.today_queue(user_id, card_id, queued_date);
 
+-- 4e. AI DECK TEMPLATES (cache of AI-generated decks: same request → reuse, no new AI call)
+create table if not exists public.ai_deck_templates (
+  id uuid primary key default gen_random_uuid(),
+  request_hash text not null,                       -- signature of (kind, pair, level, topic)
+  request_key text,                                 -- human-readable request description
+  kind text not null default 'deck',                -- 'deck' | 'topics'
+  native_language text,
+  target_language text,
+  level integer not null default 1,
+  topic text,
+  payload jsonb not null,                           -- generated JSON (deck or topics)
+  payload_hash text not null,                       -- dedup of identical outputs
+  times_used integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.ai_deck_templates add column if not exists kind text not null default 'deck';
+alter table public.ai_deck_templates add column if not exists times_used integer not null default 0;
+
+create index if not exists idx_ai_deck_templates_hash on public.ai_deck_templates(request_hash);
+create unique index if not exists idx_ai_deck_templates_payload on public.ai_deck_templates(request_hash, payload_hash);
+
 -- 4b. REVIEW LOG (analytics for the AI refill pipeline)
 create table if not exists public.review_log (
   id uuid primary key default gen_random_uuid(),
