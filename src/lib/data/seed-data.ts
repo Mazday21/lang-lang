@@ -4,6 +4,8 @@ export interface SeedCard {
   rule_description: string;
 }
 
+import { EXTRA_DECKS } from "./seed-data-extra";
+
 export interface SeedDeck {
   title: string;
   description: string;
@@ -2122,3 +2124,9 @@ export const STARTER_DECKS: Record<string, SeedDeck[]> = {
 
 // Fallback legacy export
 export const SEED_DECKS = STARTER_DECKS["ru-uz"];
+
+// Merge extra decks (triple the card count per pair)
+for (const [pair, decks] of Object.entries(EXTRA_DECKS)) {
+  if (!STARTER_DECKS[pair]) STARTER_DECKS[pair] = [];
+  STARTER_DECKS[pair].push(...decks);
+}
