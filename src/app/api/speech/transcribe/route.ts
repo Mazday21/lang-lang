@@ -90,22 +90,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Dev / Mock fallback when GEMINI_API_KEY is not configured yet
-    console.warn("GEMINI_API_KEY not configured. Returning fallback transcription for:", targetLanguage);
-    const mockResponses: Record<string, string> = {
-      узбекский: "Men boryapman",
-      татарский: "Минем китабым",
-      английский: "I am learning",
-      русский: "Я иду",
-      испанский: "Voy a ir",
-    };
-
-    return NextResponse.json({
-      success: true,
-      text: prompt ? prompt.split(" ")[0] : mockResponses[targetLanguage] || "Men boryapman",
-      isMock: true,
-      targetLanguage,
-    });
+    // No STT provider available → the client shows a localized
+    // «Извините, сервис временно недоступен» message
+    return NextResponse.json(
+      {
+        success: false,
+        service_unavailable: true,
+        error: "Speech recognition service is temporarily unavailable",
+      },
+      { status: 503 }
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Ошибка распознавания речи";
     console.error("Transcribe API error:", err);

@@ -60,9 +60,10 @@ function fallbackGenerateDeck(topic: string): GeneratedDeckResult {
 /**
 /**
  * Generates an educational language deck.
- * Provider order: OpenRouter (MiMo, cheap) → Gemini → local fallback generator.
+ * Provider order: OpenRouter (MiMo, cheap) → Gemini → null (the caller then
+ * offers semantically similar decks from the template base instead).
  */
-export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckResult> {
+export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckResult | null> {
   const detectedLanguage = detectLanguageFromText(topic);
 
   const systemPrompt = `Ты — эксперт-лингвист и преподаватель языков (с фокусом на узбекский, татарский, английский, русский и другие языки).
@@ -139,6 +140,6 @@ export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckRe
     }
   }
 
-  // 3. Local fallback generator (works offline, no AI)
-  return fallbackGenerateDeck(topic);
+  // 3. No provider could generate — the caller shows semantic suggestions
+  return null;
 }

@@ -353,6 +353,10 @@ export const UZ_MAP: Record<string, string> = {
 
   // ── Today's mixed deck ───────────────────────────────
   "Колода на сегодня": "Bugungi to'plam",
+  "Извините, сервис временно недоступен":
+    "Kechirasiz, xizmat vaqtincha mavjud emas",
+  "ИИ временно недоступен — выберите похожую колоду по смыслу":
+    "AI vaqtincha mavjud emas — ma'noga o'xshash to'plamni tanlang",
   "Микс-колода в приоритете • ещё {count} можно повторить позже":
     "Aralash to'plam birinchi o'rinada • yana {count} ta keyinroq takrorlash mumkin",
   "Микс карт из ваших колод под ваш уровень":

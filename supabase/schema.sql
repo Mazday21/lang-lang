@@ -138,6 +138,10 @@ alter table public.ai_deck_templates add column if not exists times_used integer
 create index if not exists idx_ai_deck_templates_hash on public.ai_deck_templates(request_hash);
 create unique index if not exists idx_ai_deck_templates_payload on public.ai_deck_templates(request_hash, payload_hash);
 
+-- Vector indicators for semantic search («5 ближайших колод по смыслу»)
+alter table public.decks add column if not exists embedding jsonb;
+alter table public.ai_deck_templates add column if not exists embedding jsonb;
+
 -- 4b. REVIEW LOG (analytics for the AI refill pipeline)
 create table if not exists public.review_log (
   id uuid primary key default gen_random_uuid(),

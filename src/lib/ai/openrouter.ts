@@ -26,12 +26,11 @@ export function isOpenRouterConfigured(): boolean {
 
 /**
  * Cheap speech-to-text via OpenRouter chat completions with audio input.
- * Default model: google/gemini-2.0-flash-lite-001 — the cheapest audio-input model
- * on OpenRouter ($0.075/$0.30 per 1M tokens, a voice message costs ~$0.00003).
- * Override with OPENROUTER_STT_MODEL env var.
+ * Default model: google/gemini-2.5-flash-lite — cheap audio-input model on
+ * OpenRouter (~$0.10/$0.40 per 1M tokens). Override with OPENROUTER_STT_MODEL.
  */
 export const DEFAULT_OPENROUTER_STT_MODEL =
-  process.env.OPENROUTER_STT_MODEL || "google/gemini-2.0-flash-lite-001";
+  process.env.OPENROUTER_STT_MODEL || "google/gemini-2.5-flash-lite";
 
 export async function callOpenRouterAudioTranscription(
   systemPrompt: string,

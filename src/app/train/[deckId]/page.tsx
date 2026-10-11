@@ -86,6 +86,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Card interaction state
   const [userAnswer, setUserAnswer] = useState<string>("");
@@ -173,6 +174,13 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
     }
   }, [isAuthLoading, loadDeckCards]);
 
+  // Floating notice (e.g. «Извините, сервис временно недоступен») auto-hides
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   // When the session is over, fetch the (possibly grown) proficiency level
   useEffect(() => {
     const isDone = !isLoading && cards.length > 0 && currentIndex >= cards.length;
@@ -252,6 +260,12 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
           } else {
             setShowPaywall(true);
           }
+          return;
+        }
+
+        // AI speech service is down → localized floating message
+        if (data.service_unavailable || res.status === 503) {
+          setNotice(t("Извините, сервис временно недоступен"));
           return;
         }
 
@@ -457,6 +471,13 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   return (
     <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-5 max-w-lg mx-auto flex flex-col gap-4">
       {/* Paywall Modal */}
+      {/* Floating notice (service unavailable etc.) */}
+      {notice && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-2xl bg-[#2A2352] text-white text-xs shadow-lg animate-in fade-in">
+          {notice}
+        </div>
+      )}
+
       {/* Soft daily limit stub */}
       <DailyLimitModal
         isOpen={showDailyLimit}

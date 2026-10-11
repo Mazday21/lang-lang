@@ -9,6 +9,12 @@ import {
   normalizePairKey,
 } from "@/lib/utils/language";
 import { computeMixShares, snapToAvailableLevel } from "@/lib/utils/today-mix";
+import {
+  embedText,
+  buildDeckEmbeddingText,
+  cosineSimilarity,
+  isValidEmbedding,
+} from "@/lib/ai/embedding";
 
 export const MAX_SESSION_CARDS = 20;
 
@@ -57,6 +63,7 @@ interface MockStore {
       is_dynamic: boolean;
       source?: string;
       content_hash?: string | null;
+      embedding?: number[];
       created_at?: string;
     }
   >;
@@ -648,6 +655,14 @@ export async function createDeckWithCards(
   const source = options.source ?? "user";
   const contentHash = options.content_hash ?? null;
   const level = options.level || deckData.level || 1;
+  // Vector indicator for semantic search — stored right at deck creation
+  const embedding = embedText(
+    buildDeckEmbeddingText({
+      title: deckData.deck_name,
+      description: deckData.description,
+      cards: deckData.cards,
+    })
+  );
 
   // Idempotency guard: never create duplicates of generated content
   if (contentHash && options.skip_if_exists) {
@@ -673,6 +688,7 @@ export async function createDeckWithCards(
       is_dynamic: true,
       source,
       content_hash: contentHash,
+      embedding,
       created_at: new Date().toISOString(),
     });
 
@@ -717,6 +733,7 @@ export async function createDeckWithCards(
       is_starter: isStarter,
       source,
       content_hash: contentHash,
+      embedding,
     })
     .select("id, title")
     .single();
@@ -1386,6 +1403,83 @@ async function resolveWeakCardIds(cards: CardItem[]): Promise<Set<string>> {
   }
 
   return weak;
+}
+
+/** Suggestion item for the «похожие колоды» fallback (vector search). */
+export interface DeckSuggestion {
+  id: string;
+  source: "deck" | "template";
+  title: string;
+  description: string | null;
+  level: number;
+  card_count: number;
+  similarity: number;
+}
+
+/**
+ * Vector search over the user's decks of the pair: returns decks closest to the
+ * query "по смыслу". Every deck carries a vector indicator (embedding); decks
+ * created before the feature get one lazily backfilled.
+ */
+export async function findSimilarDecks(
+  userId: string,
+  pairKey: string | undefined,
+  queryText: string,
+  limit = 5
+): Promise<DeckSuggestion[]> {
+  const decks = await getUserDecks(userId, pairKey);
+  if (decks.length === 0) return [];
+  const deckIds = new Set(decks.map((d) => d.id));
+
+  const embeddings = new Map<string, number[]>();
+
+  if (!isSupabaseConfigured()) {
+    for (const d of mockStore.decks.values()) {
+      if (!deckIds.has(d.id)) continue;
+      if (isValidEmbedding(d.embedding)) {
+        embeddings.set(d.id, d.embedding);
+      } else {
+        const vec = embedText(
+          buildDeckEmbeddingText({ title: d.title, description: d.description })
+        );
+        d.embedding = vec;
+        embeddings.set(d.id, vec);
+      }
+    }
+  } else {
+    const supabase = getSupabaseAdminClient();
+    const { data: rows } = await supabase
+      .from("decks")
+      .select("id, title, description, embedding")
+      .in("id", Array.from(deckIds))
+      .limit(500);
+    for (const row of rows || []) {
+      if (isValidEmbedding(row.embedding)) {
+        embeddings.set(row.id, row.embedding);
+      } else {
+        const vec = embedText(
+          buildDeckEmbeddingText({ title: row.title, description: row.description })
+        );
+        embeddings.set(row.id, vec);
+        // Lazy backfill of the vector indicator (best-effort)
+        await supabase.from("decks").update({ embedding: vec }).eq("id", row.id);
+      }
+    }
+  }
+
+  const queryVec = embedText(queryText);
+  return decks
+    .map((d) => ({
+      id: d.id,
+      source: "deck" as const,
+      title: d.title,
+      description: d.description,
+      level: d.level || 1,
+      card_count: d.total_cards,
+      similarity: cosineSimilarity(queryVec, embeddings.get(d.id) || null),
+    }))
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit);
 }
 
 /**

@@ -30,6 +30,18 @@ export function CreateDeckModal({
   const [topic, setTopic] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Semantic suggestions shown when the AI service is unavailable
+  const [similarDecks, setSimilarDecks] = useState<
+    Array<{
+      id: string;
+      source: "deck" | "template";
+      title: string;
+      description: string | null;
+      level: number;
+      card_count: number;
+    }> | null
+  >(null);
+  const [pickedId, setPickedId] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -92,6 +104,12 @@ export function CreateDeckModal({
         return;
       }
 
+      // AI unavailable → offer the 5 closest decks by meaning (vector search)
+      if (data.ai_unavailable && Array.isArray(data.suggestions)) {
+        setSimilarDecks(data.suggestions);
+        return;
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || t("Не удалось сгенерировать колоду"));
       }
@@ -104,6 +122,40 @@ export function CreateDeckModal({
       setError(msg);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Picks a semantic suggestion: templates instantiate instantly (no AI),
+  // existing decks open directly in training.
+  const handlePickSimilar = async (item: { id: string; source: "deck" | "template" }) => {
+    if (isGenerating || pickedId) return;
+    setPickedId(item.id);
+    setError(null);
+    try {
+      if (item.source === "deck") {
+        onClose();
+        router.push(`/train/${item.id}`);
+        return;
+      }
+
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/decks/generate", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          template_id: item.id,
+          native_language: nativeLang,
+          target_language: targetLang,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || t("Ошибка генерации"));
+      onClose();
+      router.push(`/train/${data.deck_id}`);
+    } catch (err) {
+      setPickedId(null);
+      setError(err instanceof Error ? err.message : t("Ошибка генерации"));
     }
   };
 
@@ -180,6 +232,40 @@ export function CreateDeckModal({
               <p className="text-xs text-[#A63A4B] bg-[#FFF1F3] border border-[#F9D7DD] p-2.5 rounded-xl">
                 {error}
               </p>
+            )}
+
+            {/* AI unavailable → 5 closest decks by meaning (vector search) */}
+            {similarDecks && similarDecks.length > 0 && (
+              <div className="space-y-2 pt-1">
+                <p className="text-[11px] font-medium text-[#7B6FA6] uppercase tracking-wider">
+                  {t("ИИ временно недоступен — выберите похожую колоду по смыслу")}
+                </p>
+                <div className="space-y-1.5">
+                  {similarDecks.map((item) => (
+                    <button
+                      key={item.source + item.id}
+                      type="button"
+                      disabled={isGenerating || Boolean(pickedId)}
+                      onClick={() => handlePickSimilar(item)}
+                      className="w-full p-2.5 rounded-2xl border border-[#DCD0F5] bg-white hover:border-[#B7A0F6] active:scale-[0.99] transition-all text-left disabled:opacity-60"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-[#2A2352] truncate">
+                          {item.title}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#F2ECFC] border border-[#DCD0F5] text-[#7B6FA6] whitespace-nowrap">
+                          {t("Уровень")} {item.level} · {item.card_count}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="text-[11px] text-[#7B6FA6] mt-0.5 line-clamp-1">
+                          {item.description}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             {isGenerating && (
