@@ -52,7 +52,8 @@ interface MockUserLimit {
   gen_date: string;
 }
 
-const mockLimits = new Map<string, MockUserLimit>();
+const mockLimits = (globalThis as unknown as { __mockLimits?: Map<string, MockUserLimit> }).__mockLimits ||
+  ((globalThis as unknown as { __mockLimits?: Map<string, MockUserLimit> }).__mockLimits = new Map());
 
 function isSupabaseConfigured(): boolean {
   return Boolean(

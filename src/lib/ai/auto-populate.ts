@@ -9,6 +9,7 @@ import {
 import { isOpenRouterConfigured } from "@/lib/ai/openrouter";
 import {
   createDeckWithCards,
+  countSharedDecksForPair,
   getUserDecks,
   getUserWeakCards,
   countUserAiDecksSince,
@@ -21,7 +22,8 @@ import { normalizePairKey } from "@/lib/utils/language";
  * Automatic content pipeline (shared templates + personal reinforcement decks).
  *
  * Layer 1/2 — shared curriculum: AI generates starter decks ONCE per language pair
- * (is_starter = true, shared by every user of that pair). Idempotent via content_hash.
+ * (is_starter = true, shared by every user of that pair). Idempotent via content_hash
+ * and capped at TARGET_SHARED_DECKS_PER_PAIR so random AI topics can't flood the DB.
  *
  * Layer 3 — personal top-up: if the user is running low on due cards OR keeps failing
  * certain cards, generate a personal reinforcement deck. Max 1 per user per day.
@@ -32,6 +34,8 @@ import { normalizePairKey } from "@/lib/utils/language";
 
 /** Max shared decks generated in a single pipeline run (keeps latency bounded). */
 const MAX_SHARED_DECKS_PER_RUN = 3;
+/** Hard cap of shared AI decks per language pair — stops unbounded growth. */
+export const TARGET_SHARED_DECKS_PER_PAIR = 12;
 /** Target number of due cards a learner should have "in the bank". */
 const DUE_TARGET = 15;
 /** Max personal AI decks per user per day (budget guard). */
@@ -68,7 +72,19 @@ export async function ensureSharedCurriculum(params: {
     return { created: 0, skipped: 0 };
   }
 
-  const topics = await generateTopicsForPair(native, target, 6);
+  // Stop when the pair already has enough shared decks — random AI topics
+  // must not flood the database on every visit
+  const pairKey = normalizePairKey(`${native}-${target}`);
+  const existingCount = await countSharedDecksForPair(pairKey);
+  if (existingCount >= TARGET_SHARED_DECKS_PER_PAIR) {
+    return { created: 0, skipped: existingCount };
+  }
+
+  const topics = await generateTopicsForPair(
+    native,
+    target,
+    Math.min(6, TARGET_SHARED_DECKS_PER_PAIR - existingCount + 1)
+  );
   let created = 0;
   let skipped = 0;
 

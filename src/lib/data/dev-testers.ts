@@ -10,8 +10,9 @@ import { isSupabaseConfigured } from "@/lib/data/decks";
 
 export const DEV_TELEGRAM_ID = "403709392";
 
-// In-memory fallback for local dev mode
-const mockTesters = new Set<string>();
+// In-memory fallback for local dev mode (globalThis: survives per-route module copies)
+const mockTesters = (globalThis as unknown as { __mockTesters?: Set<string> }).__mockTesters ||
+  ((globalThis as unknown as { __mockTesters?: Set<string> }).__mockTesters = new Set());
 
 export function normalizeTelegramId(id: string | number | null | undefined): string {
   return String(id ?? "").replace(/\D/g, "");

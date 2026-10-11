@@ -177,7 +177,7 @@ export async function generateDeckForTopic(
 
   const result = await callOpenRouterJSON<{ cards?: unknown[] }>(systemPrompt, userPrompt, {
     temperature: 0.5,
-    maxTokens: 4096,
+    maxTokens: 8192,
   });
 
   const cards = validateGeneratedCards(result?.cards, 12);
@@ -219,7 +219,7 @@ ${weakList}
     title?: string;
     description?: string;
     cards?: unknown[];
-  }>(systemPrompt, userPrompt, { temperature: 0.6, maxTokens: 4096 });
+  }>(systemPrompt, userPrompt, { temperature: 0.6, maxTokens: 8192 });
 
   const cards = validateGeneratedCards(result?.cards, 10);
   if (cards.length < 5) return null;

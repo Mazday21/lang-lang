@@ -126,7 +126,9 @@ export async function callOpenRouterJSON<T>(
       body: JSON.stringify({
         model,
         temperature: options.temperature ?? 0.4,
-        max_tokens: options.maxTokens ?? 4096,
+        max_tokens: options.maxTokens ?? 8192,
+        // Cap the model's internal reasoning so it can't eat the output budget
+        reasoning: { max_tokens: 1024 },
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },

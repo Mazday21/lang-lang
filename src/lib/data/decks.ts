@@ -77,12 +77,15 @@ interface MockStore {
   >;
 }
 
-const mockStore: MockStore = {
+// Stored on globalThis: Next.js dev compiles each route as a separate module
+// graph, so a module-level store would be re-created (and wiped) per route.
+const globalStore = globalThis as unknown as { __mockStore?: MockStore };
+const mockStore: MockStore = (globalStore.__mockStore ||= {
   seededUsers: new Set(),
   userLanguages: new Map(),
   decks: new Map(),
   cards: new Map(),
-};
+});
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -333,10 +336,8 @@ export async function getUserDecks(
     );
 
     if (pairFilter) {
-      const filtered = userDecks.filter((d) => isDeckMatchingPair(d, pairFilter));
-      if (filtered.length > 0) {
-        userDecks = filtered;
-      }
+      // Strict filtering: only decks of this exact language pair
+      userDecks = userDecks.filter((d) => isDeckMatchingPair(d, pairFilter));
     }
 
     const allCards = Array.from(mockStore.cards.values()).filter(
@@ -1072,6 +1073,28 @@ export async function getTodayDeckCards(
     .sort((a, b) => a.level - b.level);
 
   return { cards: result, distribution, user_level: snappedLevel };
+}
+
+/**
+ * Counts shared (is_starter) decks that belong to a language pair.
+ * Used to cap the automatic curriculum growth.
+ */
+export async function countSharedDecksForPair(pairKey: string): Promise<number> {
+  if (!isSupabaseConfigured()) {
+    let count = 0;
+    for (const d of Array.from(mockStore.decks.values())) {
+      if (d.is_starter && isDeckMatchingPair(d, pairKey)) count++;
+    }
+    return count;
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("decks")
+    .select("id, language_pair, native_language, target_language")
+    .eq("is_starter", true);
+
+  return (data || []).filter((d) => isDeckMatchingPair(d, pairKey)).length;
 }
 
 /**

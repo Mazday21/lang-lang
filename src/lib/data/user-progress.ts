@@ -38,8 +38,9 @@ interface ProgressRow {
   placement_tested: boolean;
 }
 
-// In-memory fallback for local dev mode
-const mockRows = new Map<string, ProgressRow>();
+// In-memory fallback for local dev mode (globalThis: survives per-route module copies)
+const mockRows = (globalThis as unknown as { __mockProgress?: Map<string, ProgressRow> }).__mockProgress ||
+  ((globalThis as unknown as { __mockProgress?: Map<string, ProgressRow> }).__mockProgress = new Map());
 
 const clampLevel = (n: number) => Math.min(10, Math.max(0, Math.round(n)));
 
