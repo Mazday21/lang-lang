@@ -75,6 +75,13 @@ interface MockStore {
       next_review_at: string;
     }
   >;
+  todayQueue: Map<
+    string,
+    {
+      date: string;
+      items: Array<{ card_id: string; deck_id: string; done: boolean; position: number }>;
+    }
+  >;
 }
 
 // Stored on globalThis: Next.js dev compiles each route as a separate module
@@ -85,6 +92,7 @@ const mockStore: MockStore = (globalStore.__mockStore ||= {
   userLanguages: new Map(),
   decks: new Map(),
   cards: new Map(),
+  todayQueue: new Map(),
 });
 
 export function isSupabaseConfigured(): boolean {
@@ -932,10 +940,11 @@ export interface TodayDeckDistribution {
 }
 
 /**
- * Prepares a level pool: due cards first, then the rest; inside each part
- * cards are interleaved across decks so a single deck can't dominate.
+ * Prepares a level pool: weak cards (poorly known) first, then due cards,
+ * then the rest; inside each part cards are interleaved across decks so a
+ * single deck can't dominate.
  */
-function interleavePool(pool: CardItem[], nowIso: string): CardItem[] {
+function interleavePool(pool: CardItem[], nowIso: string, weakIds: Set<string>): CardItem[] {
   const interleave = (arr: CardItem[]): CardItem[] => {
     const byDeck = new Map<string, CardItem[]>();
     for (const c of arr) {
@@ -953,9 +962,13 @@ function interleavePool(pool: CardItem[], nowIso: string): CardItem[] {
     return out;
   };
 
+  const due = pool.filter((c) => c.next_review_at <= nowIso);
+  const later = pool.filter((c) => c.next_review_at > nowIso);
   return [
-    ...interleave(pool.filter((c) => c.next_review_at <= nowIso)),
-    ...interleave(pool.filter((c) => c.next_review_at > nowIso)),
+    ...interleave(due.filter((c) => weakIds.has(c.id))),
+    ...interleave(due.filter((c) => !weakIds.has(c.id))),
+    ...interleave(later.filter((c) => weakIds.has(c.id))),
+    ...interleave(later.filter((c) => !weakIds.has(c.id))),
   ];
 }
 
@@ -1000,6 +1013,7 @@ export async function getTodayDeckCards(
   }
 
   const nowIso = new Date().toISOString();
+  const weakIds = await resolveWeakCardIds(allCards);
   const byLevel = new Map<number, CardItem[]>();
   for (const card of allCards) {
     const lvl = levelByDeck.get(card.deck_id) || 1;
@@ -1007,7 +1021,7 @@ export async function getTodayDeckCards(
     byLevel.get(lvl)!.push(card);
   }
   for (const [lvl, pool] of Array.from(byLevel.entries())) {
-    byLevel.set(lvl, interleavePool(pool, nowIso));
+    byLevel.set(lvl, interleavePool(pool, nowIso, weakIds));
   }
 
   const availableLevels = Array.from(byLevel.keys());
@@ -1072,6 +1086,19 @@ export async function getTodayDeckCards(
     .filter((d) => d.count > 0)
     .sort((a, b) => a.level - b.level);
 
+  // Persist as today's review queue («Повторение на сегодня»): weak cards
+  // that the user struggles with get the front positions
+  const queueOrder = [...result].sort((a, b) => {
+    const wa = weakIds.has(a.id) ? 0 : 1;
+    const wb = weakIds.has(b.id) ? 0 : 1;
+    if (wa !== wb) return wa - wb;
+    return (
+      Math.abs((levelByDeck.get(a.deck_id) || 1) - snappedLevel) -
+      Math.abs((levelByDeck.get(b.deck_id) || 1) - snappedLevel)
+    );
+  });
+  await saveTodayQueue(userId, queueOrder);
+
   return { cards: result, distribution, user_level: snappedLevel };
 }
 
@@ -1095,6 +1122,267 @@ export async function countSharedDecksForPair(pairKey: string): Promise<number> 
     .eq("is_starter", true);
 
   return (data || []).filter((d) => isDeckMatchingPair(d, pairKey)).length;
+}
+
+/** Item of today's review queue ("Колода на сегодня"). */
+export interface TodayQueueItem {
+  card_id: string;
+  deck_id: string;
+  done: boolean;
+  position: number;
+}
+
+function todayDateKey(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+async function loadTodayQueue(userId: string): Promise<TodayQueueItem[]> {
+  if (!isSupabaseConfigured()) {
+    const q = mockStore.todayQueue.get(userId);
+    if (!q || q.date !== todayDateKey()) return [];
+    return [...q.items];
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("today_queue")
+    .select("card_id, deck_id, done, position")
+    .eq("user_id", userId)
+    .eq("queued_date", todayDateKey())
+    .order("position", { ascending: true })
+    .limit(500);
+
+  return (data || []).map((r) => ({
+    card_id: r.card_id,
+    deck_id: r.deck_id || "",
+    done: Boolean(r.done),
+    position: r.position ?? 0,
+  }));
+}
+
+/**
+ * Persists the "Колода на сегодня" mix as today's review queue.
+ * Priority order (weak cards first) is stored in `position`.
+ */
+export async function saveTodayQueue(
+  userId: string,
+  cards: Array<{ id: string; deck_id: string }>
+): Promise<void> {
+  const items: TodayQueueItem[] = cards.map((c, i) => ({
+    card_id: c.id,
+    deck_id: c.deck_id,
+    done: false,
+    position: i,
+  }));
+
+  if (!isSupabaseConfigured()) {
+    mockStore.todayQueue.set(userId, { date: todayDateKey(), items });
+    return;
+  }
+
+  try {
+    const supabase = getSupabaseAdminClient();
+    // Rebuild today's queue (idempotent: only called when no queue exists yet)
+    await supabase
+      .from("today_queue")
+      .delete()
+      .eq("user_id", userId)
+      .eq("queued_date", todayDateKey());
+    if (items.length > 0) {
+      await supabase.from("today_queue").insert(
+        items.map((it) => ({
+          user_id: userId,
+          card_id: it.card_id,
+          deck_id: it.deck_id || null,
+          position: it.position,
+          done: false,
+          queued_date: todayDateKey(),
+        }))
+      );
+    }
+  } catch (err) {
+    console.warn("Failed to save today queue:", err);
+  }
+}
+
+/** Queue status for the hub banner ("Повторение на сегодня"). */
+export async function getTodayQueueStatus(
+  userId: string
+): Promise<{ total: number; remaining: number }> {
+  const items = await loadTodayQueue(userId);
+  return {
+    total: items.length,
+    remaining: items.filter((i) => !i.done).length,
+  };
+}
+
+/**
+ * Marks a queue card as reviewed. Cards graded ≤ 2 stay in the queue and jump
+ * to the front — poorly known words get priority in repetition (SM-2 grade 1-2).
+ */
+export async function markQueueCardReviewed(
+  userId: string,
+  cardId: string,
+  grade: SM2Grade
+): Promise<void> {
+  try {
+    const weak = grade <= 2;
+
+    if (!isSupabaseConfigured()) {
+      const q = mockStore.todayQueue.get(userId);
+      if (!q || q.date !== todayDateKey()) return;
+      const item = q.items.find((i) => i.card_id === cardId);
+      if (!item) return;
+      if (weak) {
+        item.position = Math.min(...q.items.map((i) => i.position)) - 1;
+        item.done = false;
+      } else {
+        item.done = true;
+      }
+      return;
+    }
+
+    const supabase = getSupabaseAdminClient();
+    if (!weak) {
+      await supabase
+        .from("today_queue")
+        .update({ done: true })
+        .eq("user_id", userId)
+        .eq("card_id", cardId)
+        .eq("queued_date", todayDateKey());
+      return;
+    }
+
+    // Weak grade: keep in queue, move to the very front
+    const { data: rows } = await supabase
+      .from("today_queue")
+      .select("position")
+      .eq("user_id", userId)
+      .eq("queued_date", todayDateKey());
+    const minPos = Math.min(...(rows || []).map((r) => r.position ?? 0), 0);
+    await supabase
+      .from("today_queue")
+      .update({ done: false, position: minPos - 1 })
+      .eq("user_id", userId)
+      .eq("card_id", cardId)
+      .eq("queued_date", todayDateKey());
+  } catch (err) {
+    // Queue bookkeeping must never break the review flow
+    console.warn("Failed to update today queue:", err);
+  }
+}
+
+/** Fetches full card rows by ids (for restoring the saved queue). */
+async function getCardsByIds(ids: string[]): Promise<CardItem[]> {
+  if (ids.length === 0) return [];
+
+  if (!isSupabaseConfigured()) {
+    return ids
+      .map((id) => mockStore.cards.get(id))
+      .filter((c): c is NonNullable<typeof c> => Boolean(c));
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("cards")
+    .select("id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at")
+    .in("id", ids)
+    .limit(500);
+  return data || [];
+}
+
+/** Deck difficulty levels for a set of deck ids. */
+async function getDeckLevels(deckIds: string[]): Promise<Map<string, number>> {
+  const levels = new Map<string, number>();
+  if (deckIds.length === 0) return levels;
+
+  if (!isSupabaseConfigured()) {
+    for (const id of deckIds) {
+      const d = mockStore.decks.get(id);
+      levels.set(id, d?.level || 1);
+    }
+    return levels;
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase.from("decks").select("id, level").in("id", deckIds);
+  for (const d of data || []) levels.set(d.id, Number(d.level) || 1);
+  return levels;
+}
+
+/**
+ * Returns the saved "Колода на сегодня" queue as training cards
+ * (weak cards first), or null when there is no pending queue.
+ */
+export async function getTodayQueueCards(
+  userId: string,
+  userLevel: number
+): Promise<{
+  cards: CardItem[];
+  distribution: TodayDeckDistribution[];
+  user_level: number;
+} | null> {
+  const items = (await loadTodayQueue(userId)).filter((i) => !i.done);
+  if (items.length === 0) return null;
+
+  const byId = new Map((await getCardsByIds(items.map((i) => i.card_id))).map((c) => [c.id, c]));
+  const ordered = items
+    .sort((a, b) => a.position - b.position)
+    .map((i) => byId.get(i.card_id))
+    .filter((c): c is CardItem => Boolean(c));
+  if (ordered.length === 0) return null;
+
+  const levelByDeck = await getDeckLevels(Array.from(new Set(ordered.map((c) => c.deck_id))));
+  const levelOf = (c: CardItem) => levelByDeck.get(c.deck_id) || 1;
+
+  const availableLevels = Array.from(new Set(ordered.map(levelOf)));
+  const snappedLevel = snapToAvailableLevel(availableLevels, userLevel);
+
+  const distribution: TodayDeckDistribution[] = availableLevels
+    .map((lvl) => {
+      const count = ordered.filter((c) => levelOf(c) === lvl).length;
+      return { level: lvl, count, percent: ordered.length ? count / ordered.length : 0 };
+    })
+    .filter((d) => d.count > 0)
+    .sort((a, b) => a.level - b.level);
+
+  return { cards: ordered, distribution, user_level: snappedLevel };
+}
+
+/**
+ * Card ids the user struggles with: low SM-2 ease or a grade ≤ 2 in the last 7 days.
+ * These cards get priority in repetition ("Колода на сегодня" and queues).
+ */
+async function resolveWeakCardIds(cards: CardItem[]): Promise<Set<string>> {
+  const weak = new Set<string>();
+  const knownIds = new Set(cards.map((c) => c.id));
+
+  for (const c of cards) {
+    if ((c.ease_factor ?? 2.5) < 2.2 || (c.repetitions ?? 0) === 0) {
+      // Brand-new cards are not "weak" — only low ease counts
+      if ((c.ease_factor ?? 2.5) < 2.2) weak.add(c.id);
+    }
+  }
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = getSupabaseAdminClient();
+      const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+      const { data: logs } = await supabase
+        .from("review_log")
+        .select("card_id, grade, reviewed_at")
+        .gte("reviewed_at", since)
+        .lte("grade", 2)
+        .limit(1000);
+      for (const l of logs || []) {
+        if (knownIds.has(l.card_id)) weak.add(l.card_id);
+      }
+    } catch {
+      // review_log is optional (legacy schemas)
+    }
+  }
+
+  return weak;
 }
 
 /**
@@ -1177,10 +1465,12 @@ export async function updateCardReview(
     card.repetitions = sm2Result.repetitions;
     card.ease_factor = sm2Result.ease_factor;
     card.next_review_at = sm2Result.next_review_at.toISOString();
+    (card as { updated_at?: string }).updated_at = new Date().toISOString();
 
     mockStore.cards.set(cardId, card);
 
     await logCardReview(userId, cardId, card.deck_id, grade);
+    await markQueueCardReviewed(userId, cardId, grade);
 
     return { card, sm2Result };
   }
@@ -1224,6 +1514,7 @@ export async function updateCardReview(
   }
 
   await logCardReview(userId, cardId, updatedCard.deck_id, grade);
+  await markQueueCardReviewed(userId, cardId, grade);
 
   return { card: updatedCard, sm2Result };
 }

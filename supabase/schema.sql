@@ -97,6 +97,25 @@ create table if not exists public.dev_testers (
   added_at timestamptz not null default now()
 );
 
+-- 4d. TODAY QUEUE ("Колода на сегодня" — saved daily review queue, first priority)
+create table if not exists public.today_queue (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  card_id uuid not null references public.cards(id) on delete cascade,
+  deck_id uuid references public.decks(id) on delete cascade,
+  position integer not null default 0,              -- lower = repeated earlier
+  done boolean not null default false,              -- reviewed in today's queue
+  queued_date text not null default to_char(now(), 'YYYY-MM-DD'),
+  created_at timestamptz not null default now()
+);
+
+alter table public.today_queue add column if not exists position integer not null default 0;
+alter table public.today_queue add column if not exists done boolean not null default false;
+alter table public.today_queue add column if not exists queued_date text not null default to_char(now(), 'YYYY-MM-DD');
+
+create index if not exists idx_today_queue_user_date on public.today_queue(user_id, queued_date);
+create unique index if not exists idx_today_queue_user_card_date on public.today_queue(user_id, card_id, queued_date);
+
 -- 4b. REVIEW LOG (analytics for the AI refill pipeline)
 create table if not exists public.review_log (
   id uuid primary key default gen_random_uuid(),

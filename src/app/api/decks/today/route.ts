@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserIdFromRequest } from "@/lib/auth/get-user-id";
-import { getTodayDeckCards } from "@/lib/data/decks";
+import { getTodayDeckCards, getTodayQueueCards } from "@/lib/data/decks";
 import { getUserProgress } from "@/lib/data/user-progress";
 import { getUserLanguages } from "@/lib/data/decks";
 import { normalizePairKey } from "@/lib/utils/language";
@@ -37,7 +37,9 @@ export async function GET(req: NextRequest) {
     const progress = await getUserProgress(userId);
     const userLevel = Math.min(5, Math.max(1, Math.floor(progress.proficiency_level / 2) + 1));
 
-    const result = await getTodayDeckCards(userId, pairKey, userLevel);
+    // Today's saved queue has first priority — reuse it while cards remain
+    const queued = await getTodayQueueCards(userId, userLevel);
+    const result = queued ?? (await getTodayDeckCards(userId, pairKey, userLevel));
     const targetCode = pairKey.split("-")[1] || "uz";
 
     return NextResponse.json({
@@ -51,6 +53,7 @@ export async function GET(req: NextRequest) {
       cards: result.cards,
       distribution: result.distribution,
       user_level: result.user_level,
+      from_queue: Boolean(queued),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to build today's deck";

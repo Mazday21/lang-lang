@@ -3,6 +3,7 @@ import {
   isSupabaseConfigured,
   getUserMasteredPoints,
   countCardsReviewedToday,
+  getTodayQueueStatus,
 } from "@/lib/data/decks";
 
 /**
@@ -30,6 +31,8 @@ export interface UserProgress {
   learned_points: number;    // knowledge points earned by studying
   mastered_cards: number;
   reviewed_today: number;    // cards already reviewed today (daily plan progress)
+  queue_total: number;       // size of today's saved mix queue («Колода на сегодня»)
+  queue_remaining: number;   // queue cards left — first priority in «Повторение на сегодня»
 }
 
 interface ProgressRow {
@@ -121,9 +124,10 @@ async function writeRow(userId: string, row: ProgressRow): Promise<void> {
  */
 export async function getUserProgress(userId: string): Promise<UserProgress> {
   const row = await readRow(userId);
-  const [{ points, masteredCards }, reviewedToday] = await Promise.all([
+  const [{ points, masteredCards }, reviewedToday, queue] = await Promise.all([
     getUserMasteredPoints(userId),
     countCardsReviewedToday(userId),
+    getTodayQueueStatus(userId),
   ]);
 
   const bonus = Math.floor(points / POINTS_PER_LEVEL);
@@ -145,6 +149,8 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
     learned_points: points,
     mastered_cards: masteredCards,
     reviewed_today: reviewedToday,
+    queue_total: queue.total,
+    queue_remaining: queue.remaining,
   };
 }
 

@@ -155,6 +155,8 @@ export default function HubPage() {
             learned_points: progressData.learned_points ?? 0,
             mastered_cards: progressData.mastered_cards ?? 0,
             reviewed_today: progressData.reviewed_today ?? 0,
+            queue_total: progressData.queue_total ?? 0,
+            queue_remaining: progressData.queue_remaining ?? 0,
           });
         }
       } catch (err: unknown) {
@@ -239,6 +241,8 @@ export default function HubPage() {
       learned_points: prev?.learned_points ?? 0,
       mastered_cards: prev?.mastered_cards ?? 0,
       reviewed_today: prev?.reviewed_today ?? 0,
+      queue_total: prev?.queue_total ?? 0,
+      queue_remaining: prev?.queue_remaining ?? 0,
     }));
     try {
       const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -263,6 +267,8 @@ export default function HubPage() {
           learned_points: data.learned_points ?? 0,
           mastered_cards: data.mastered_cards ?? 0,
           reviewed_today: data.reviewed_today ?? 0,
+          queue_total: data.queue_total ?? 0,
+          queue_remaining: data.queue_remaining ?? 0,
         });
       }
     } catch {
@@ -289,11 +295,16 @@ export default function HubPage() {
 
   const totalDue = decks.reduce((acc, d) => acc + d.due_cards, 0);
 
-  // Daily review plan: a motivating, non-scary number; the backlog calmly waits its turn
-  const remainingToday = Math.min(
-    totalDue,
-    Math.max(0, DAILY_REVIEW_LIMIT - (progress?.reviewed_today ?? 0))
-  );
+  // Daily review plan: a motivating, non-scary number; the backlog calmly waits
+  // its turn. The saved «Колода на сегодня» queue goes FIRST.
+  const queueRemaining = progress?.queue_remaining ?? 0;
+  const remainingToday =
+    queueRemaining > 0
+      ? queueRemaining
+      : Math.min(
+          totalDue,
+          Math.max(0, DAILY_REVIEW_LIMIT - (progress?.reviewed_today ?? 0))
+        );
 
   // Russian plural form for "карточка"
   const cardsWord = (n: number) => {
@@ -465,7 +476,11 @@ export default function HubPage() {
             </p>
             {!isLoadingDecks && totalDue > 0 && (
               <p className="text-[11px] text-[#7B6FA6]">
-                {remainingToday > 0
+                {queueRemaining > 0
+                  ? t("Микс-колода в приоритете • ещё {count} можно повторить позже", {
+                      count: Math.max(0, totalDue - queueRemaining),
+                    })
+                  : remainingToday > 0
                   ? t("Ещё {count} можно повторить позже", {
                       count: totalDue - remainingToday,
                     })
