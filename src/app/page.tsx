@@ -21,8 +21,10 @@ import {
   Plus,
   ChevronDown,
   Gauge,
+  Shuffle,
 } from "lucide-react";
 import { DeckItem } from "@/lib/data/decks";
+import { computeMixShares } from "@/lib/utils/today-mix";
 import { UserLimitStatus } from "@/lib/limits";
 import { UserProgress, DAILY_REVIEW_LIMIT } from "@/lib/data/user-progress";
 import { proficiencyLabel } from "@/lib/data/placement-tests";
@@ -90,6 +92,12 @@ export default function HubPage() {
   // Proficiency (0..10) → recommended deck difficulty (1..5)
   const proficiency = progress?.proficiency_level ?? 0;
   const recommendedLevel = Math.min(5, Math.floor(proficiency / 2) + 1);
+
+  // "Колода на сегодня" mix display — the same algorithm as the server mixer
+  const mixShares = computeMixShares(
+    decks.map((d) => d.level || 1),
+    recommendedLevel
+  );
 
   // Group decks by difficulty level, recommended groups first
   const decksByLevel = [...decks]
@@ -499,6 +507,43 @@ export default function HubPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Today's mixed deck — cards from all decks, split by difficulty */}
+      {decks.length > 0 && (
+        <Card
+          onClick={() => router.push("/train/today")}
+          className="border-[#DCD0F5] bg-gradient-to-r from-[#F0EAFB] to-[#E3F7EF] shadow-none cursor-pointer hover:border-[#B7A0F6] active:scale-[0.99] transition-all"
+        >
+          <CardContent className="p-5 flex items-center justify-between gap-3">
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <p className="text-xs text-[#7B6FA6] font-medium">
+                {t("Колода на сегодня")}
+              </p>
+              <p className="text-sm font-semibold text-[#2A2352]">
+                {t("Микс карт из ваших колод под ваш уровень")}
+              </p>
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                {mixShares.map((s) => (
+                  <Badge
+                    key={s.level}
+                    variant="outline"
+                    className={`text-[10px] py-0 px-1.5 font-normal whitespace-nowrap ${
+                      s.level === recommendedLevel
+                        ? "text-[#2A2352] border-[#B7A0F6] bg-white"
+                        : "text-[#7B6FA6] border-[#DCD0F5] bg-white/70"
+                    }`}
+                  >
+                    {Math.round(s.percent * 100)}% · {t("Уровень")} {s.level}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div className="h-10 w-10 rounded-2xl bg-white flex items-center justify-center shrink-0">
+              <Shuffle className="h-5 w-5 text-[#B7A0F6]" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Deck Builder Action Button (Pro) / CTA for free accounts */}
       {limits?.plan === "pro" ? (

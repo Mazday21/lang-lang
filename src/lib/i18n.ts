@@ -350,4 +350,12 @@ export const UZ_MAP: Record<string, string> = {
   "Русский (Rus tili)": "Rus tili",
   "Сохранение...": "Saqlanmoqda...",
   "Применить языковую пару": "Til juftligini qo'llash",
+
+  // ── Today's mixed deck ───────────────────────────────
+  "Колода на сегодня": "Bugungi to'plam",
+  "Микс карт из ваших колод под ваш уровень":
+    "Darajangizga mos to'plamlaringizdan aralashtirilgan kartochkalar",
+  "Перемешанные карты из ваших колод под ваш уровень сложности":
+    "Darajangizga mos to'plamlaringizdan aralashtirilgan kartochkalar",
+  Уровень: "Daraja",
 };

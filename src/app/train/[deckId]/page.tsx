@@ -138,7 +138,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch(`/api/decks/${deckId}/cards`, { headers });
+      const isTodayDeck = deckId === "today";
+      const res = await fetch(
+        isTodayDeck ? "/api/decks/today" : `/api/decks/${deckId}/cards`,
+        { headers }
+      );
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -496,7 +500,7 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             {t("Колода")}
           </p>
           <h1 className="text-base font-semibold text-[#2A2352] truncate">
-            {deckTitle}
+            {t(deckTitle)}
           </h1>
         </div>
       </header>

@@ -8,6 +8,7 @@ import {
   extractDirectedLangTokens,
   normalizePairKey,
 } from "@/lib/utils/language";
+import { computeMixShares, snapToAvailableLevel } from "@/lib/utils/today-mix";
 
 export const MAX_SESSION_CARDS = 20;
 
@@ -918,6 +919,159 @@ export async function countCardsReviewedToday(userId: string): Promise<number> {
     .limit(5000);
 
   return cards?.length || 0;
+}
+
+/** Size of the "Колода на сегодня" mixed session. */
+export const TODAY_DECK_SIZE = 15;
+
+export interface TodayDeckDistribution {
+  level: number;
+  count: number;
+  percent: number;
+}
+
+/**
+ * Prepares a level pool: due cards first, then the rest; inside each part
+ * cards are interleaved across decks so a single deck can't dominate.
+ */
+function interleavePool(pool: CardItem[], nowIso: string): CardItem[] {
+  const interleave = (arr: CardItem[]): CardItem[] => {
+    const byDeck = new Map<string, CardItem[]>();
+    for (const c of arr) {
+      if (!byDeck.has(c.deck_id)) byDeck.set(c.deck_id, []);
+      byDeck.get(c.deck_id)!.push(c);
+    }
+    const queues = Array.from(byDeck.values());
+    const out: CardItem[] = [];
+    let i = 0;
+    while (out.length < arr.length) {
+      const q = queues[i % queues.length];
+      if (q.length > 0) out.push(q.shift()!);
+      i++;
+    }
+    return out;
+  };
+
+  return [
+    ...interleave(pool.filter((c) => c.next_review_at <= nowIso)),
+    ...interleave(pool.filter((c) => c.next_review_at > nowIso)),
+  ];
+}
+
+/**
+ * Builds "Колода на сегодня": a mixed session of REAL cards (SM-2 works as usual)
+ * drawn from the user's decks and distributed by difficulty —
+ * see computeMixShares for the exact 60/20/20 rules and edge cases.
+ */
+export async function getTodayDeckCards(
+  userId: string,
+  pairKey: string | undefined,
+  userLevel: number,
+  size = TODAY_DECK_SIZE
+): Promise<{
+  cards: CardItem[];
+  distribution: TodayDeckDistribution[];
+  user_level: number;
+}> {
+  const decks = await getUserDecks(userId, pairKey);
+  const levelByDeck = new Map<string, number>();
+  for (const d of decks) levelByDeck.set(d.id, d.level || 1);
+  const deckIds = Array.from(levelByDeck.keys());
+
+  let allCards: CardItem[] = [];
+  if (deckIds.length > 0) {
+    if (!isSupabaseConfigured()) {
+      allCards = Array.from(mockStore.cards.values()).filter((c) =>
+        deckIds.includes(c.deck_id)
+      );
+    } else {
+      const supabase = getSupabaseAdminClient();
+      const { data } = await supabase
+        .from("cards")
+        .select(
+          "id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at"
+        )
+        .in("deck_id", deckIds)
+        .order("next_review_at", { ascending: true })
+        .limit(2000);
+      allCards = data || [];
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const byLevel = new Map<number, CardItem[]>();
+  for (const card of allCards) {
+    const lvl = levelByDeck.get(card.deck_id) || 1;
+    if (!byLevel.has(lvl)) byLevel.set(lvl, []);
+    byLevel.get(lvl)!.push(card);
+  }
+  for (const [lvl, pool] of Array.from(byLevel.entries())) {
+    byLevel.set(lvl, interleavePool(pool, nowIso));
+  }
+
+  const availableLevels = Array.from(byLevel.keys());
+  const snappedLevel = snapToAvailableLevel(availableLevels, userLevel);
+  const shares = computeMixShares(availableLevels, userLevel);
+
+  // Shares → card counts, rounding drift goes to the largest bucket
+  const counts = new Map<number, number>();
+  let allocated = 0;
+  for (const s of shares) {
+    const n = Math.round(size * s.percent);
+    counts.set(s.level, n);
+    allocated += n;
+  }
+  if (shares.length > 0 && allocated !== size) {
+    let largest = shares[0];
+    for (const s of shares) {
+      if ((counts.get(s.level) || 0) > (counts.get(largest.level) || 0)) largest = s;
+    }
+    counts.set(largest.level, Math.max(0, (counts.get(largest.level) || 0) + (size - allocated)));
+  }
+
+  // Take cards per level according to the mix
+  const picked: CardItem[] = [];
+  const used = new Set<string>();
+  for (const [lvl, count] of Array.from(counts.entries())) {
+    const pool = (byLevel.get(lvl) || []).filter((c) => !used.has(c.id));
+    for (const card of pool.slice(0, count)) {
+      used.add(card.id);
+      picked.push(card);
+    }
+  }
+
+  // Spill: fill the remainder from the nearest levels, then any cards
+  if (picked.length < size) {
+    const rest = allCards
+      .filter((c) => !used.has(c.id))
+      .sort(
+        (a, b) =>
+          Math.abs((levelByDeck.get(a.deck_id) || 1) - snappedLevel) -
+          Math.abs((levelByDeck.get(b.deck_id) || 1) - snappedLevel)
+      );
+    for (const card of rest) {
+      if (picked.length >= size) break;
+      used.add(card.id);
+      picked.push(card);
+    }
+  }
+
+  // Light shuffle so cards from different decks alternate
+  for (let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+
+  const result = picked.slice(0, size);
+  const distribution: TodayDeckDistribution[] = Array.from(counts.keys())
+    .map((lvl) => {
+      const count = result.filter((c) => (levelByDeck.get(c.deck_id) || 1) === lvl).length;
+      return { level: lvl, count, percent: result.length ? count / result.length : 0 };
+    })
+    .filter((d) => d.count > 0)
+    .sort((a, b) => a.level - b.level);
+
+  return { cards: result, distribution, user_level: snappedLevel };
 }
 
 /**
