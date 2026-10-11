@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Check, ArrowLeft, RefreshCw, Loader2, ExternalLink } from "lucide-react";
 import { useI18n } from "@/context/i18n-context";
+import { STARS_PRICE } from "@/lib/stars-price";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -192,7 +193,7 @@ export function PaywallModal({
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <span>{t("Подписка Pro — 39 000 UZS / ⭐️ 150 Stars")}</span>
+                  <span>{t("Подписка Pro — 39 000 UZS / ⭐️ {stars} Stars", { stars: STARS_PRICE })}</span>
                   <ExternalLink className="h-3.5 w-3.5 opacity-70" />
                 </>
               )}

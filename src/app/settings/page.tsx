@@ -20,6 +20,7 @@ import {
   Globe,
 } from "lucide-react";
 import { useI18n } from "@/context/i18n-context";
+import { STARS_PRICE } from "@/lib/stars-price";
 import {
   UserLimitStatus,
   FREE_TRIAL_LIMIT,
@@ -385,7 +386,7 @@ export default function SettingsPage() {
               <Sparkles className="h-4 w-4 text-[#2A2352]" />
               {t("Тариф Pro")}
             </CardTitle>
-            <span className="text-xs font-semibold text-[#2A2352]">39 000 UZS / ⭐️ 150</span>
+            <span className="text-xs font-semibold text-[#2A2352]">39 000 UZS / ⭐️ {STARS_PRICE}</span>
           </div>
           <CardDescription className="text-xs">
             {t("Полный фокус на изучении без пауз и ограничений")}
@@ -439,7 +440,7 @@ export default function SettingsPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <span>{t("Подписка Pro — 39 000 UZS / ⭐️ 150 Stars")}</span>
+                  <span>{t("Подписка Pro — 39 000 UZS / ⭐️ {stars} Stars", { stars: STARS_PRICE })}</span>
                   <ExternalLink className="h-3.5 w-3.5 opacity-70" />
                 </>
               )}

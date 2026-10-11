@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserIdFromRequest } from "@/lib/auth/get-user-id";
+import { STARS_PRICE } from "@/lib/stars-price";
 
 export const dynamic = "force-dynamic";
 
-/** Telegram Stars price of the Pro subscription (in Stars). */
-const STARS_PRICE = 150;
 /** Subscription duration in seconds (30 days) — enables auto-renewal in Telegram. */
 const SUBSCRIPTION_PERIOD_SECONDS = 30 * 24 * 3600;
 

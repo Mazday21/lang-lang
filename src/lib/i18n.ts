@@ -127,8 +127,8 @@ export const UZ_MAP: Record<string, string> = {
     "Kamchiliklaringizga mos aqlli mustahkamlash to'plamlari",
   "Новые функции и обновления — первыми":
     "Yangi funksiyalar va yangilanishlar — birinchi bo'lib",
-  "Подписка Pro — 39 000 UZS / ⭐️ 150 Stars":
-    "Pro obunasi — 39 000 UZS / ⭐️ 150 Stars",
+  "Подписка Pro — 39 000 UZS / ⭐️ {stars} Stars":
+    "Pro obunasi — 39 000 UZS / ⭐️ {stars} Stars",
   "Отменить Pro (Вернуться на Free)": "Pro'ni bekor qilish (Free'ga qaytish)",
   "Язык интерфейса": "Interfeys tili",
   "Выберите язык интерфейса приложения":
