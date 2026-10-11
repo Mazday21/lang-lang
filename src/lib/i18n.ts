@@ -393,4 +393,10 @@ export const UZ_MAP: Record<string, string> = {
     "To'plam faqat shu qurilmada saqlanadi va boshqa qurilmalarda ko'rinmaydi",
   Своя: "Shaxsiy",
   "Колода не найдена": "To'plam topilmadi",
+
+  // ── Telegram Stars payments ──────────────────────────
+  "Оплата принята! Pro активирован ✅": "To'lov qabul qilindi! Pro faollashtirildi ✅",
+  "Оплата отменена": "To'lov bekor qilindi",
+  "Платёж не завершён. Попробуйте ещё раз.":
+    "To'lov yakunlanmadi. Yana urinib ko'ring.",
 };

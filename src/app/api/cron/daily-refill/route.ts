@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/data/decks";
 import { ensureSharedCurriculum, topUpPersonalDecks } from "@/lib/ai/auto-populate";
+import { expireOverduePro } from "@/lib/data/payments";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -32,6 +33,9 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = getSupabaseAdminClient();
+
+    // 0. Expire Pro subscriptions whose 30-day period is over
+    const proExpired = await expireOverduePro();
 
     // Load users once: used both as shared-template owners and for personal top-ups.
     // (Shared starter decks require a real user_id due to FK constraints.)
@@ -81,6 +85,7 @@ export async function GET(req: NextRequest) {
       shared: sharedResults,
       users_scanned: users?.length || 0,
       users_topped_up: toppedUp,
+      pro_expired: proExpired,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Daily refill failed";

@@ -190,7 +190,16 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success && data.checkout_url) {
         const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
-        if (tg?.openLink) {
+        if (tg?.openInvoice) {
+          tg.openInvoice(data.checkout_url, (status) => {
+            if (status === "paid") {
+              setMessage(t("Оплата принята! Pro активирован ✅"));
+              fetchLimits();
+            } else if (status === "cancelled") {
+              setMessage(t("Оплата отменена"));
+            }
+          });
+        } else if (tg?.openLink) {
           tg.openLink(data.checkout_url);
         } else {
           window.open(data.checkout_url, "_blank");

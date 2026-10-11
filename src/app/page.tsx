@@ -418,6 +418,7 @@ export default function HubPage() {
         isOpen={isPaywallOpen}
         mode={paywallMode}
         onClose={() => setIsPaywallOpen(false)}
+        onPaid={() => fetchDecksAndLimits()}
         token={token}
       />
 

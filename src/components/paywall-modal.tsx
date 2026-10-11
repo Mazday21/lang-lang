@@ -15,9 +15,18 @@ interface PaywallModalProps {
   token?: string | null;
   /** Why the paywall is shown: generator is Pro-only, trial is exhausted, or a plain upsell */
   mode?: "generator" | "trial" | "upsell";
+  /** Called after a successful Stars payment */
+  onPaid?: () => void;
 }
 
-export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "trial" }: PaywallModalProps) {
+export function PaywallModal({
+  isOpen,
+  onClose,
+  onResetLimit,
+  token,
+  mode = "trial",
+  onPaid,
+}: PaywallModalProps) {
   const router = useRouter();
   const { t } = useI18n();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -67,9 +76,20 @@ export function PaywallModal({ isOpen, onClose, onResetLimit, token, mode = "tri
       if (data.success && data.checkout_url) {
         setCheckoutNotice(t("Переход к оплате подписки Pro..."));
 
-        // Use Telegram WebApp openLink or window.open
+        // Telegram Stars invoice: openInvoice shows the native payment sheet
         const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
-        if (tg?.openLink) {
+        if (tg?.openInvoice) {
+          tg.openInvoice(data.checkout_url, (status) => {
+            if (status === "paid") {
+              setCheckoutNotice(t("Оплата принята! Pro активирован ✅"));
+              onPaid?.();
+            } else if (status === "cancelled") {
+              setCheckoutNotice(t("Оплата отменена"));
+            } else {
+              setCheckoutNotice(t("Платёж не завершён. Попробуйте ещё раз."));
+            }
+          });
+        } else if (tg?.openLink) {
           tg.openLink(data.checkout_url);
         } else {
           window.open(data.checkout_url, "_blank");

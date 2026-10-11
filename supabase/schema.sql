@@ -142,6 +142,20 @@ create unique index if not exists idx_ai_deck_templates_payload on public.ai_dec
 alter table public.decks add column if not exists embedding jsonb;
 alter table public.ai_deck_templates add column if not exists embedding jsonb;
 
+-- 4f. TELEGRAM STARS PAYMENTS (subscription bookkeeping)
+alter table public.users add column if not exists pro_until timestamptz;
+
+create table if not exists public.payments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  charge_id text not null unique,                    -- telegram_payment_charge_id (idempotency + refunds)
+  stars integer not null default 0,
+  is_recurring boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_payments_user on public.payments(user_id);
+
 -- 4b. REVIEW LOG (analytics for the AI refill pipeline)
 create table if not exists public.review_log (
   id uuid primary key default gen_random_uuid(),

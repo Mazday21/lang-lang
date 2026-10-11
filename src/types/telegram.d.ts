@@ -68,6 +68,10 @@ export interface TelegramWebApp {
   setBackgroundColor: (color: string) => void;
   openLink: (url: string, options?: { try_instant_view?: boolean }) => void;
   openTelegramLink: (url: string) => void;
+  openInvoice: (
+    url: string,
+    callback?: (status: "paid" | "cancelled" | "failed" | "pending" | string) => void
+  ) => void;
 }
 
 declare global {
