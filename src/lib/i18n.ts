@@ -364,4 +364,33 @@ export const UZ_MAP: Record<string, string> = {
   "Перемешанные карты из ваших колод под ваш уровень сложности":
     "Darajangizga mos to'plamlaringizdan aralashtirilgan kartochkalar",
   Уровень: "Daraja",
+
+  // ── Manual deck creation (localStorage only) ─────────
+  "Добавить свою колоду вручную": "O'z to'plamingizni qo'lda qo'shish",
+  "Создать колоду вручную": "To'plamni qo'lda yaratish",
+  "Заполните карточки сами — прогресс сохранится только на этом устройстве":
+    "Kartochkalarni o'zingiz to'ldiring — natija faqat shu qurilmada saqlanadi",
+  "Название колоды": "To'plam nomi",
+  "Например: Заказ в ресторане": "Masalan: Restoranda buyurtma",
+  "Описание (необязательно)": "Tavsif (ixtiyoriy)",
+  "Для чего эта колода": "Bu to'plam nima uchun",
+  "Уровень сложности": "Murakkablik darajasi",
+  Карточки: "Kartochkalar",
+  Карточка: "Kartochka",
+  "Удалить карточку": "Kartochkani o'chirish",
+  "Вопрос или фраза (на родном языке)": "Savol yoki ibora (ona tilida)",
+  "Ответ (на изучаемом языке)": "Javob (o'rganilayotgan tilda)",
+  "Правило / пояснение (необязательно)": "Qoida / tushuntirish (ixtiyoriy)",
+  "Добавить карточку": "Kartochka qo'shish",
+  "Максимум {n} карточек": "Ko'pi bilan {n} ta kartochka",
+  "Заполните название колоды": "To'plam nomini kiriting",
+  "Добавьте хотя бы одну карточку": "Kamida bitta kartochka qo'shing",
+  "Заполните «вопрос» и «ответ» в каждой карточке":
+    "Har bir kartochkada «savol» va «javob» ni to'ldiring",
+  "Не удалось создать колоду": "To'plam yaratib bo'lmadi",
+  "Создать колоду": "To'plam yaratish",
+  "Колода хранится только на этом устройстве и не видна с других":
+    "To'plam faqat shu qurilmada saqlanadi va boshqa qurilmalarda ko'rinmaydi",
+  Своя: "Shaxsiy",
+  "Колода не найдена": "To'plam topilmadi",
 };

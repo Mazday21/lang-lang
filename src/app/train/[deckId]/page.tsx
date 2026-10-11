@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { CardItem } from "@/lib/data/decks";
 import { SM2Grade } from "@/lib/sm2";
+import { isLocalDeckId, getLocalDeck, gradeLocalCard } from "@/lib/local-decks";
 import { canonicalForm } from "@/lib/utils/translit";
 import { useAudioRecorder } from "@/hooks/use-audio-recorder";
 import { PaywallModal } from "@/components/paywall-modal";
@@ -137,6 +138,26 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       const headers: HeadersInit = {};
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      // Manually created decks are stored on this device (localStorage)
+      if (isLocalDeckId(deckId)) {
+        const localDeck = getLocalDeck(deckId);
+        if (!localDeck) {
+          throw new Error(t("Колода не найдена"));
+        }
+        setDeckTitle(localDeck.title);
+        setTargetLanguage(localDeck.target_language || "узбекский");
+        setCards(
+          localDeck.cards.slice(0, 20).map((c) => ({ ...c, deck_id: localDeck.id }))
+        );
+        setCurrentIndex(0);
+        setReviewedCount(0);
+        setViewMode("unanswered");
+        setVoiceAttempts(0);
+        setIsCorrectResult(false);
+        setUserAnswer("");
+        return;
       }
 
       const isTodayDeck = deckId === "today";
@@ -362,11 +383,16 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      fetch(`/api/cards/${cardId}/review`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ grade }),
-      }).catch((err) => console.error("Error saving SM-2:", err));
+      // Manually created decks: SM-2 progress stays on this device
+      if (isLocalDeckId(deckId)) {
+        gradeLocalCard(deckId, cardId, grade);
+      } else {
+        fetch(`/api/cards/${cardId}/review`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ grade }),
+        }).catch((err) => console.error("Error saving SM-2:", err));
+      }
 
       // Advance to next card immediately
       setCurrentIndex((prev) => prev + 1);

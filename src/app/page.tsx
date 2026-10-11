@@ -29,6 +29,8 @@ import { UserLimitStatus } from "@/lib/limits";
 import { UserProgress, DAILY_REVIEW_LIMIT } from "@/lib/data/user-progress";
 import { proficiencyLabel } from "@/lib/data/placement-tests";
 import { CreateDeckModal } from "@/components/create-deck-modal";
+import { ManualDeckModal } from "@/components/manual-deck-modal";
+import { isLocalDeckId, deleteLocalDeck, getLocalDeckItems } from "@/lib/local-decks";
 import { PaywallModal } from "@/components/paywall-modal";
 import { DailyLimitModal } from "@/components/daily-limit-modal";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
@@ -55,6 +57,7 @@ export default function HubPage() {
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [paywallMode, setPaywallMode] = useState<"generator" | "trial" | "upsell">("upsell");
   const [showDailyLimit, setShowDailyLimit] = useState(false);
@@ -138,7 +141,9 @@ export default function HubPage() {
         const decksData = await decksRes.json();
 
         if (decksData.success) {
-          setDecks(decksData.decks || []);
+          // Manually created decks live only on this device (localStorage)
+          const localItems = getLocalDeckItems(pair);
+          setDecks([...localItems, ...(decksData.decks || [])]);
         }
 
         const limitsData = await limitsRes.json();
@@ -283,6 +288,12 @@ export default function HubPage() {
 
       setDecks((prev) => prev.filter((d) => d.id !== deckId));
 
+      // Manually created decks live only on this device
+      if (isLocalDeckId(deckId)) {
+        deleteLocalDeck(deckId);
+        return;
+      }
+
       await fetch(`/api/decks/${deckId}`, {
         method: "DELETE",
         headers,
@@ -365,6 +376,15 @@ export default function HubPage() {
         currentNative={nativeLang}
         currentTarget={targetLang}
         onSave={handleSwitchLanguagePair}
+      />
+
+      {/* Manual Deck Modal (localStorage only) */}
+      <ManualDeckModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        nativeLang={nativeLang}
+        targetLang={targetLang}
+        onCreated={() => fetchDecksAndLimits()}
       />
 
       {/* Create Deck AI Modal */}
@@ -587,6 +607,17 @@ export default function HubPage() {
         </Button>
       )}
 
+      {/* Manual deck creation — stored locally on this device only */}
+      <Button
+        variant="outline"
+        size="lg"
+        onClick={() => setIsManualModalOpen(true)}
+        className="w-full text-xs font-semibold h-12 rounded-2xl"
+      >
+        <Plus className="h-4 w-4 mr-1.5" />
+        {t("Добавить свою колоду вручную")}
+      </Button>
+
       {/* Decks Section */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
@@ -715,6 +746,14 @@ export default function HubPage() {
                             name: t(levelName(deck.level || 1)),
                           })}
                         </Badge>
+                        {isLocalDeckId(deck.id) && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] py-0 px-1.5 font-normal text-[#1D6B5B] border-[#B9EBDD] bg-[#E3F7EF] whitespace-nowrap"
+                          >
+                            {t("Своя")}
+                          </Badge>
+                        )}
                       </div>
                       {deck.description && (
                         <p className="text-xs text-[#7B6FA6] line-clamp-2 leading-relaxed">
