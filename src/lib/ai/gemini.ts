@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 /**
  * Returns an instance of GoogleGenAI if GEMINI_API_KEY is configured.

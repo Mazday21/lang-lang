@@ -1,5 +1,6 @@
 import { detectLanguageFromText } from "@/lib/utils/language";
 import { callGeminiJSON } from "@/lib/ai/gemini";
+import { callOpenRouterJSON, isOpenRouterConfigured } from "@/lib/ai/openrouter";
 
 export interface GeneratedCard {
   front: string;
@@ -57,16 +58,11 @@ function fallbackGenerateDeck(topic: string): GeneratedDeckResult {
 }
 
 /**
- * Generates an educational language deck using Google Gemini API (gemini-2.5-flash-lite).
+/**
+ * Generates an educational language deck.
+ * Provider order: OpenRouter (MiMo, cheap) → Gemini → local fallback generator.
  */
 export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    console.warn("GEMINI_API_KEY is not set. Using fallback deck generator.");
-    return fallbackGenerateDeck(topic);
-  }
-
   const detectedLanguage = detectLanguageFromText(topic);
 
   const systemPrompt = `Ты — эксперт-лингвист и преподаватель языков (с фокусом на узбекский, татарский, английский, русский и другие языки).
@@ -96,8 +92,7 @@ export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckRe
 
   const userPrompt = `Тема для изучения: "${topic}"`;
 
-  try {
-    const result = await callGeminiJSON<GeneratedDeckResult>(systemPrompt, userPrompt);
+  const validate = (result: GeneratedDeckResult | null): GeneratedDeckResult | null => {
     if (
       result &&
       typeof result.deck_name === "string" &&
@@ -116,9 +111,34 @@ export async function generateDeckWithAI(topic: string): Promise<GeneratedDeckRe
         })),
       };
     }
-    return fallbackGenerateDeck(topic);
-  } catch (err) {
-    console.error("Error generating deck with Gemini:", err);
-    return fallbackGenerateDeck(topic);
+    return null;
+  };
+
+  // 1. OpenRouter (MiMo) — primary provider: cheap and reliable JSON output
+  if (isOpenRouterConfigured()) {
+    try {
+      const result = await callOpenRouterJSON<GeneratedDeckResult>(systemPrompt, userPrompt, {
+        temperature: 0.5,
+        maxTokens: 8192,
+      });
+      const valid = validate(result);
+      if (valid) return valid;
+    } catch (err) {
+      console.warn("OpenRouter deck generation failed:", err);
+    }
   }
+
+  // 2. Gemini — fallback provider
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const result = await callGeminiJSON<GeneratedDeckResult>(systemPrompt, userPrompt);
+      const valid = validate(result);
+      if (valid) return valid;
+    } catch (err) {
+      console.warn("Gemini deck generation failed:", err);
+    }
+  }
+
+  // 3. Local fallback generator (works offline, no AI)
+  return fallbackGenerateDeck(topic);
 }
