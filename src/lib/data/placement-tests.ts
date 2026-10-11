@@ -135,22 +135,22 @@ export const PLACEMENT_TESTS: Record<string, PlacementTest> = {
     pair: "uz-ru",
     questions: [
       {
-        text: "«Salom» — что это значит?",
+        text: "«Salom» — nima degani?",
         options: ["Спасибо", "Здравствуйте", "До свидания", "Пожалуйста"],
         correctIndex: 1,
       },
       {
-        text: "«Katta rahmat» — что это значит?",
+        text: "«Katta rahmat» — nima degani?",
         options: ["Большой пожалуйста", "Ничего страшного", "Большое спасибо", "Маленькое спасибо"],
         correctIndex: 2,
       },
       {
-        text: "«Bu qancha turadi?» — как переводится?",
+        text: "«Bu qancha turadi?» — rus tilida qanday aytiladi?",
         options: ["Где это находится?", "Сколько это стоит?", "Кто это сделал?", "Что это такое?"],
         correctIndex: 1,
       },
       {
-        text: "«Tushunmadim, qayta ayting» — выберите верный перевод",
+        text: "«Tushunmadim, qayta ayting» — to'g'ri tarjamani tanlang",
         options: [
           "Я не знаю, скажите",
           "Повторите, я устал",
@@ -160,7 +160,7 @@ export const PLACEMENT_TESTS: Record<string, PlacementTest> = {
         correctIndex: 2,
       },
       {
-        text: "«Kecha biz bozorga bordik» — как переводится?",
+        text: "«Kecha biz bozorga bordik» — qanday tarjima qilinadi?",
         options: [
           "Завтра мы пойдём на базар",
           "Вчера мы ходили на базар",
@@ -170,7 +170,7 @@ export const PLACEMENT_TESTS: Record<string, PlacementTest> = {
         correctIndex: 1,
       },
       {
-        text: "«Bilsam, oldinroq kelardim» — усложнённая конструкция",
+        text: "«Bilsam, oldinroq kelardim» — murakkab tuzilma",
         options: [
           "Я не знал и пришёл позже",
           "Если бы я знал, я бы пришёл раньше",
@@ -187,22 +187,22 @@ export const PLACEMENT_TESTS: Record<string, PlacementTest> = {
     pair: "uz-en",
     questions: [
       {
-        text: "«Salom» — what does it mean?",
+        text: "«Salom» — nima degani?",
         options: ["Thanks", "Hello", "Goodbye", "Please"],
         correctIndex: 1,
       },
       {
-        text: "«Katta rahmat» — what does it mean?",
+        text: "«Katta rahmat» — nima degani?",
         options: ["You are very welcome", "Good evening", "Thank you very much", "See you tomorrow"],
         correctIndex: 2,
       },
       {
-        text: "«Bu qancha turadi?» — how to translate?",
+        text: "«Bu qancha turadi?» — ingliz tilida qanday aytiladi?",
         options: ["Where is this?", "Who made this?", "What is this?", "How much does this cost?"],
         correctIndex: 3,
       },
       {
-        text: "«Tushunmadim, qayta ayting» — choose the correct translation",
+        text: "«Tushunmadim, qayta ayting» — to'g'ri tarjamani tanlang",
         options: [
           "I do not know, tell me",
           "I did not understand, please say it again",
@@ -212,7 +212,7 @@ export const PLACEMENT_TESTS: Record<string, PlacementTest> = {
         correctIndex: 1,
       },
       {
-        text: "«Kecha biz bozorga bordik» — how to translate?",
+        text: "«Kecha biz bozorga bordik» — qanday tarjima qilinadi?",
         options: [
           "We go to the market every day",
           "The market was closed yesterday",
@@ -222,7 +222,7 @@ export const PLACEMENT_TESTS: Record<string, PlacementTest> = {
         correctIndex: 2,
       },
       {
-        text: "«Bilsam, oldinroq kelardim» — advanced construction",
+        text: "«Bilsam, oldinroq kelardim» — murakkab tuzilma",
         options: [
           "When I know, I come early",
           "Knowing that, I came early",
