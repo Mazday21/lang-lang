@@ -64,31 +64,43 @@ async function getOrGenerateTopics(
   return topics;
 }
 
+/** Result of a cache-aware generation: the deck and where it came from. */
+interface GeneratedSource {
+  deck: GeneratedDeckResult | null;
+  fromCache: boolean;
+}
+
 /**
  * Cache-aware deck generation: an identical request (pair + level + topic)
  * returns an already generated deck from the template base instead of a real
- * AI call. Fresh misses are stored as reusable templates.
+ * AI call. Fresh misses are stored as reusable templates. When `allowAi` is
+ * false (daily budget exhausted), only cached decks are served.
  */
 async function getOrGenerateTopicDeck(
   topic: CurriculumTopic,
   native: string,
-  target: string
-): Promise<GeneratedDeckResult | null> {
+  target: string,
+  allowAi = true
+): Promise<GeneratedSource> {
   const meta = buildAiTemplateMeta("deck", native, target, topic.level, topic.title);
   const cached = await findCachedPayload<GeneratedDeckResult>(meta.request_hash);
   if (cached && Array.isArray(cached.cards) && cached.cards.length > 0) {
     return {
-      ...cached,
-      deck_name: cached.deck_name || topic.title,
-      description: cached.description || topic.description,
-      target_language: target,
-      level: topic.level,
+      deck: {
+        ...cached,
+        deck_name: cached.deck_name || topic.title,
+        description: cached.description || topic.description,
+        target_language: target,
+        level: topic.level,
+      },
+      fromCache: true,
     };
   }
+  if (!allowAi) return { deck: null, fromCache: false };
 
   const deck = await generateDeckForTopic(topic, native, target);
   if (deck && deck.cards.length > 0) await saveCachedPayload(meta, deck);
-  return deck;
+  return { deck, fromCache: false };
 }
 
 /** Cache-aware reinforcement deck generation (keyed by the weak words set). */
@@ -96,8 +108,9 @@ async function getOrGenerateReinforcementDeck(
   weakCards: WeakCard[],
   native: string,
   target: string,
-  level: number
-): Promise<GeneratedDeckResult | null> {
+  level: number,
+  allowAi = true
+): Promise<GeneratedSource> {
   const subject =
     "reinforce:" +
     weakCards
@@ -107,12 +120,13 @@ async function getOrGenerateReinforcementDeck(
   const meta = buildAiTemplateMeta("deck", native, target, level, subject);
   const cached = await findCachedPayload<GeneratedDeckResult>(meta.request_hash);
   if (cached && Array.isArray(cached.cards) && cached.cards.length > 0) {
-    return { ...cached, target_language: target, level };
+    return { deck: { ...cached, target_language: target, level }, fromCache: true };
   }
+  if (!allowAi) return { deck: null, fromCache: false };
 
   const deck = await generateReinforcementDeck(weakCards, native, target, level);
   if (deck && deck.cards.length > 0) await saveCachedPayload(meta, deck);
-  return deck;
+  return { deck, fromCache: false };
 }
 
 function sharedContentHash(native: string, target: string, topic: CurriculumTopic): string {
@@ -167,7 +181,7 @@ export async function ensureSharedCurriculum(params: {
 
     const contentHash = sharedContentHash(native, target, topic);
 
-    const deckData: GeneratedDeckResult | null = await getOrGenerateTopicDeck(topic, native, target);
+    const { deck: deckData } = await getOrGenerateTopicDeck(topic, native, target);
     if (!deckData || deckData.cards.length === 0) {
       skipped++;
       continue;
@@ -205,17 +219,13 @@ export async function topUpPersonalDecks(params: {
     return { created: false, reason: "not_supported_pair" };
   }
 
-  if (!isOpenRouterConfigured()) {
-    return { created: false, reason: "ai_unavailable" };
-  }
-
-  // 1. Budget guard: max N personal AI decks per user per day
+  // Budget gates only REAL AI calls: decks served from the template base
+  // (ai_deck_templates) cost nothing and never consume the daily limit.
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
   const aiToday = await countUserAiDecksSince(userId, startOfDay.toISOString());
-  if (aiToday >= MAX_PERSONAL_AI_DECKS_PER_DAY) {
-    return { created: false, reason: "daily_budget_exhausted" };
-  }
+  const underBudget = aiToday < MAX_PERSONAL_AI_DECKS_PER_DAY;
+  const allowAi = underBudget && isOpenRouterConfigured();
 
   // 2. Assess load: total due cards across the user's pair-scoped decks
   const decks: DeckItem[] = await getUserDecks(userId, normalizePairKey(`${native}-${target}`));
@@ -231,18 +241,27 @@ export async function topUpPersonalDecks(params: {
     return { created: false, reason: "enough_material" };
   }
 
-  // 3. Generate reinforcement deck (from weak cards) or fresh topic deck
-  const deckData: GeneratedDeckResult | null = struggling
-    ? await getOrGenerateReinforcementDeck(weakCards, native, target, 1)
-    : await generateFreshTopicDeck(native, target, decks);
+  // 3. Generate (or reuse) the deck: cache hits bypass the budget entirely
+  const generated = struggling
+    ? await getOrGenerateReinforcementDeck(weakCards, native, target, 1, allowAi)
+    : await generateFreshTopicDeck(native, target, decks, allowAi);
+  const deckData = generated.deck;
 
   if (!deckData || deckData.cards.length === 0) {
-    return { created: false, reason: "generation_failed" };
+    return {
+      created: false,
+      reason: !isOpenRouterConfigured()
+        ? "ai_unavailable"
+        : underBudget
+        ? "generation_failed"
+        : "daily_budget_exhausted",
+    };
   }
 
   const result = await createDeckWithCards(userId, deckData, native, {
     is_starter: false,
-    source: "ai",
+    // Cache-sourced decks don't count toward the AI spend budget
+    source: generated.fromCache ? "ai_cache" : "ai",
     content_hash: personalContentHash(userId),
     level: deckData.level || 1,
     skip_if_exists: true,
@@ -259,13 +278,14 @@ export async function topUpPersonalDecks(params: {
 async function generateFreshTopicDeck(
   native: string,
   target: string,
-  existingDecks: DeckItem[]
-): Promise<GeneratedDeckResult | null> {
+  existingDecks: DeckItem[],
+  allowAi = true
+): Promise<GeneratedSource> {
   const topics = await getOrGenerateTopics(native, target, 6);
   const usedTitles = new Set(existingDecks.map((d) => d.title.toLowerCase().trim()));
 
   const freshTopic = topics.find((t) => !usedTitles.has(t.title.toLowerCase().trim()));
-  if (!freshTopic) return null;
+  if (!freshTopic) return { deck: null, fromCache: false };
 
-  return getOrGenerateTopicDeck(freshTopic, native, target);
+  return getOrGenerateTopicDeck(freshTopic, native, target, allowAi);
 }

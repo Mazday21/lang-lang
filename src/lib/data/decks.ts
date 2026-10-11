@@ -603,7 +603,7 @@ export async function getDeckCards(
  */
 export interface CreateDeckOptions {
   is_starter?: boolean;
-  source?: "ai" | "user" | "seed";
+  source?: "ai" | "ai_cache" | "user" | "seed";
   content_hash?: string | null;
   level?: number;
   /** When true, an existing deck with the same content_hash is returned instead of inserting. */
@@ -803,7 +803,8 @@ export async function getUserWeakCards(
 }
 
 /**
- * Counts AI-generated decks created by the user since a timestamp (daily budget guard).
+ * Counts AI-generated DECKS created by the user since a timestamp (daily budget guard).
+ * Only real AI spend counts: shared starter decks and cache-sourced decks are excluded.
  */
 export async function countUserAiDecksSince(userId: string, sinceIso: string): Promise<number> {
   if (!isSupabaseConfigured()) {
@@ -811,6 +812,7 @@ export async function countUserAiDecksSince(userId: string, sinceIso: string): P
       (d) =>
         d.user_id === userId &&
         d.source === "ai" &&
+        !d.is_starter &&
         d.created_at &&
         d.created_at >= sinceIso
     ).length;
@@ -822,6 +824,7 @@ export async function countUserAiDecksSince(userId: string, sinceIso: string): P
     .select("id")
     .eq("user_id", userId)
     .eq("source", "ai")
+    .eq("is_starter", false)
     .gte("created_at", sinceIso);
 
   return data?.length || 0;
