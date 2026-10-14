@@ -187,7 +187,7 @@ export const EXTRA_RU_IT: SeedDeck[] = [
       {
         front: "Глаз",
         back: "Occhio",
-        rule_description: "Occhio (глаз); il occhio, мн. ч. gli occhi.",
+        rule_description: "Occhio (глаз); l'occhio (артикль l' перед гласной), мн. ч. gli occhi.",
       },
       {
         front: "Врач",

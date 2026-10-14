@@ -217,7 +217,7 @@ export const EXTRA_UZ_EN: SeedDeck[] = [
         front: "Oyoq",
         back: "Foot",
         rule_description:
-          "Oyoq — foot (oyoq panjasi), ko'plikda feet. Butun oyoq: leg. Heel — tovush.",
+          "Oyoq — foot (oyoq panjasi), ko'plikda feet. Butun oyoq: leg. Heel — tovon (пятка).",
       },
       {
         front: "Yurak",

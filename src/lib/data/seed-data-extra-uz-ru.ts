@@ -172,7 +172,7 @@ export const EXTRA_UZ_RU: SeedDeck[] = [
       {
         front: "Bosh",
         back: "Голова",
-        rule_description: "«Bosh» — голова. «Bosh og'rmoq» — болит голова; «bosh» so'zi «начало» ma'nosida ham ishlatiladi.",
+        rule_description: "Bosh — bosh (голова). «Bosh og'rimoq» — bosh og'rish (болеть); «bosh» — «boshlash / boshliq» (начало/главный).",
       },
       {
         front: "Qo'l",

@@ -432,7 +432,7 @@ export const EXTRA_UZ_IT: SeedDeck[] = [
       {
         front: "Men sizga yordam bera olamanmi?",
         back: "Posso aiutarla?",
-        rule_description: "«Potere» — a'la olmoq. So'roqda «Posso...?» — ...sam bo'ladimi?",
+        rule_description: "«Potere» — qila olmoq (imkoniyatga ega bo'lmoq). So'roqda «Posso...?» — ...sam bo'ladimi?",
       },
       {
         front: "Men hozir ichkari kira olmayman.",
@@ -497,7 +497,7 @@ export const EXTRA_UZ_IT: SeedDeck[] = [
       {
         front: "U Italiyadan kelgan.",
         back: "Viene dall'Italia.",
-        rule_description: "«Di» dan/dan beri ma'nosida: di + artikol → dall'Italia — Italiyadan.",
+        rule_description: "«Da» — dan (kelib chiqish): da + l' → dall'Italia — Italiyadan.",
       },
       {
         front: "Biz kinoga ketyapmiz.",
