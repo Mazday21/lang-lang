@@ -9,6 +9,7 @@ import {
   normalizePairKey,
 } from "@/lib/utils/language";
 import { computeMixShares, snapToAvailableLevel } from "@/lib/utils/today-mix";
+import { canonicalForm } from "@/lib/utils/translit";
 import {
   embedText,
   buildDeckEmbeddingText,
@@ -1123,6 +1124,28 @@ export async function getTodayDeckCards(
 }
 
 /**
+ * Titles of shared decks for a pair — used to steer AI topic generation
+ * away from already covered themes.
+ */
+export async function getSharedDeckTitles(pairKey: string): Promise<string[]> {
+  if (!isSupabaseConfigured()) {
+    return Array.from(mockStore.decks.values())
+      .filter((d) => d.is_starter && isDeckMatchingPair(d, pairKey))
+      .map((d) => d.title);
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("decks")
+    .select("title, language_pair, native_language, target_language")
+    .eq("is_starter", true)
+    .limit(300);
+  return (data || [])
+    .filter((d) => isDeckMatchingPair(d, pairKey))
+    .map((d) => d.title);
+}
+
+/**
  * Counts shared (is_starter) decks that belong to a language pair.
  * Used to cap the automatic curriculum growth.
  */
@@ -1405,8 +1428,150 @@ async function resolveWeakCardIds(cards: CardItem[]): Promise<Set<string>> {
   return weak;
 }
 
-/** Suggestion item for the «похожие колоды» fallback (vector search). */
-export interface DeckSuggestion {
+/** Normalized card front used as the duplicate key. */
+function frontKey(front: string): string {
+  return canonicalForm(front);
+}
+
+/**
+ * Normalized fronts of ALL cards visible in the user's decks of the pair —
+ * used to filter duplicate cards out of newly generated decks.
+ */
+export async function getExistingCardFronts(
+  userId: string,
+  pairKey: string | undefined
+): Promise<Set<string>> {
+  const decks = await getUserDecks(userId, pairKey);
+  const deckIds = decks.map((d) => d.id);
+  const fronts = new Set<string>();
+  if (deckIds.length === 0) return fronts;
+
+  if (!isSupabaseConfigured()) {
+    for (const c of Array.from(mockStore.cards.values())) {
+      if (deckIds.includes(c.deck_id)) fronts.add(frontKey(c.front));
+    }
+    return fronts;
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data } = await supabase
+    .from("cards")
+    .select("front")
+    .in("deck_id", deckIds)
+    .limit(5000);
+  for (const c of data || []) fronts.add(frontKey(c.front));
+  return fronts;
+}
+
+/**
+ * Removes shared AI-generated decks that heavily duplicate older decks of the
+ * same pair (≥60% of their card fronts already covered) — e.g. three separate
+ * decks all teaching pronouns. Only `is_starter + source='ai'` decks are
+ * touched; user decks are never deleted. Returns the deleted deck titles.
+ */
+export async function deduplicateSharedAiDecks(
+  pairKey: string
+): Promise<string[]> {
+  const deleted: string[] = [];
+
+  const listSharedAi = async (): Promise<
+    Array<{ id: string; title: string; created_at?: string }>
+  > => {
+    if (!isSupabaseConfigured()) {
+      return Array.from(mockStore.decks.values())
+        .filter(
+          (d) =>
+            d.is_starter &&
+            d.source === "ai" &&
+            isDeckMatchingPair(d, pairKey)
+        )
+        .map((d) => ({ id: d.id, title: d.title, created_at: d.created_at }));
+    }
+    const supabase = getSupabaseAdminClient();
+    const { data } = await supabase
+      .from("decks")
+      .select("id, title, created_at, language_pair, native_language, target_language")
+      .eq("is_starter", true)
+      .eq("source", "ai")
+      .limit(200);
+    return (data || [])
+      .filter((d) => isDeckMatchingPair(d, pairKey))
+      .map((d) => ({ id: d.id, title: d.title, created_at: d.created_at }));
+  };
+
+  const aiDecks = (await listSharedAi()).sort((a, b) =>
+    (a.created_at || "").localeCompare(b.created_at || "")
+  );
+  if (aiDecks.length === 0) return deleted;
+
+  const covered = new Set<string>(); // fronts of older decks (AI + seeds)
+
+  const frontsOfDeck = async (deckId: string): Promise<string[]> => {
+    if (!isSupabaseConfigured()) {
+      return Array.from(mockStore.cards.values())
+        .filter((c) => c.deck_id === deckId)
+        .map((c) => frontKey(c.front));
+    }
+    const supabase = getSupabaseAdminClient();
+    const { data } = await supabase
+      .from("cards")
+      .select("front")
+      .eq("deck_id", deckId)
+      .limit(200);
+    return (data || []).map((c) => frontKey(c.front));
+  };
+
+  // Seed/older non-AI starter decks of the pair form the base "covered" vocabulary
+  const baseDecks: Array<{ id: string }> = [];
+  if (!isSupabaseConfigured()) {
+    for (const d of Array.from(mockStore.decks.values())) {
+      if (d.is_starter && d.source !== "ai" && isDeckMatchingPair(d, pairKey)) {
+        baseDecks.push({ id: d.id });
+      }
+    }
+  } else {
+    const supabase = getSupabaseAdminClient();
+    const { data } = await supabase
+      .from("decks")
+      .select("id, source, language_pair, native_language, target_language")
+      .eq("is_starter", true)
+      .limit(300);
+    for (const d of data || []) {
+      if (d.source !== "ai" && isDeckMatchingPair(d, pairKey)) baseDecks.push({ id: d.id });
+    }
+  }
+  for (const d of baseDecks) {
+    for (const f of await frontsOfDeck(d.id)) covered.add(f);
+  }
+
+  for (const deck of aiDecks) {
+    const fronts = await frontsOfDeck(deck.id);
+    const duplicated = fronts.filter((f) => covered.has(f)).length;
+    const overlap = fronts.length > 0 ? duplicated / fronts.length : 1;
+
+    if (overlap >= 0.6) {
+      // Content is already covered by older decks → drop the duplicate deck
+      if (!isSupabaseConfigured()) {
+        mockStore.decks.delete(deck.id);
+        for (const [cid, c] of Array.from(mockStore.cards.entries())) {
+          if (c.deck_id === deck.id) mockStore.cards.delete(cid);
+        }
+      } else {
+        const supabase = getSupabaseAdminClient();
+        await supabase.from("decks").delete().eq("id", deck.id);
+      }
+      deleted.push(deck.title);
+    } else {
+      for (const f of fronts) covered.add(f);
+    }
+  }
+
+  return deleted;
+}
+
+/**
+ * Suggestion item for the «похожие колоды» fallback (vector search).
+ */export interface DeckSuggestion {
   id: string;
   source: "deck" | "template";
   title: string;

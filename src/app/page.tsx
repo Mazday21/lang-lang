@@ -481,8 +481,17 @@ export default function HubPage() {
         </Card>
       )}
 
-      {/* Today's Overview Banner */}
-      <Card className="border-[#DCD0F5] bg-white shadow-none">
+      {/* Today's Overview Banner — tap to start today's review (queue first) */}
+      <Card
+        onClick={() => {
+          if (remainingToday > 0) router.push("/train/today");
+        }}
+        className={`border-[#DCD0F5] bg-white shadow-none transition-all ${
+          remainingToday > 0
+            ? "cursor-pointer hover:border-[#B7A0F6] active:scale-[0.99]"
+            : ""
+        }`}
+      >
         <CardContent className="p-5 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-xs text-[#7B6FA6] font-medium">{t("Повторение на сегодня")}</p>
@@ -531,7 +540,10 @@ export default function HubPage() {
               </span>
               <button
                 type="button"
-                onClick={() => setIsTestOpen(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsTestOpen(true);
+                }}
                 className="text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors"
               >
                 {progress?.placement_tested ? t("Пройти заново") : t("Пройти тест")}

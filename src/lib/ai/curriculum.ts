@@ -142,14 +142,20 @@ function validateTopics(raw: unknown, limit = 6): CurriculumTopic[] {
 export async function generateTopicsForPair(
   nativeLang: string,
   targetLang: string,
-  count = 6
+  count = 6,
+  excludeTitles: string[] = []
 ): Promise<CurriculumTopic[]> {
   const nativeName = langName(nativeLang);
   const targetName = langName(targetLang);
 
   const systemPrompt =
     "Ты — методист по преподаванию иностранных языков. Составляешь учебные программы для языковых приложений. Всегда отвечай строгим JSON без пояснений.";
-  const userPrompt = `Носитель ${nativeName} языка изучает ${targetName} язык. Придумай ${count} тем для обучающих колод-флешек, от простого к сложному: уровни 1-3 (1 — новичок, 2 — базовый, 3 — средний). Обязательно включи базовую лексику: цвета, часто употребляемые глаголы, числа, семью и местоимения, еду, время и вопросительные слова. Для уровня 3 — немного углублённого изучения: грамматика (например, прошедшее время глаголов) и устойчивые выражения. Остальные темы — практичные и разнообразные: быт, путешествия, работа, общение, хобби. Названия тем и описания — на ${nativeName} языке. Строгий JSON: {"topics":[{"title":"...","description":"...","level":1}]}`;
+  const covered = excludeTitles.length
+    ? `\nУже есть колоды по этим темам — НЕ повторяй их и не предлагай близкие по смыслу: ${excludeTitles
+        .slice(0, 30)
+        .join("; ")}`
+    : "";
+  const userPrompt = `Носитель ${nativeName} языка изучает ${targetName} язык. Придумай ${count} тем для обучающих колод-флешек, от простого к сложному: уровни 1-3 (1 — новичок, 2 — базовый, 3 — средний). Обязательно включи базовую лексику: цвета, часто употребляемые глаголы, числа, семью и местоимения, еду, время и вопросительные слова. Для уровня 3 — немного углублённого изучения: грамматика (например, прошедшее время глаголов) и устойчивые выражения. Остальные темы — практичные и разнообразные: быт, путешествия, работа, общение, хобби. Названия тем и описания — на ${nativeName} языке. Строгий JSON: {"topics":[{"title":"...","description":"...","level":1}]}${covered}`;
 
   const result = await callOpenRouterJSON<{ topics?: unknown[] }>(systemPrompt, userPrompt, {
     temperature: 0.5,

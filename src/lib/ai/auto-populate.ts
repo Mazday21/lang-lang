@@ -10,6 +10,9 @@ import { isOpenRouterConfigured } from "@/lib/ai/openrouter";
 import {
   createDeckWithCards,
   countSharedDecksForPair,
+  getSharedDeckTitles,
+  getExistingCardFronts,
+  deduplicateSharedAiDecks,
   getUserDecks,
   getUserWeakCards,
   countUserAiDecksSince,
@@ -21,6 +24,7 @@ import {
   saveCachedPayload,
 } from "@/lib/data/ai-deck-cache";
 import { hashContent } from "@/lib/utils/hash";
+import { canonicalForm } from "@/lib/utils/translit";
 import { normalizePairKey } from "@/lib/utils/language";
 
 /**
@@ -53,13 +57,17 @@ const MAX_PERSONAL_AI_DECKS_PER_DAY = 1;
 async function getOrGenerateTopics(
   native: string,
   target: string,
-  count: number
+  count: number,
+  excludeTitles: string[] = []
 ): Promise<CurriculumTopic[]> {
-  const meta = buildAiTemplateMeta("topics", native, target, count, "curriculum-map");
+  // Cache key includes the covered themes so new topics are generated when
+  // the curriculum already contains some decks
+  const subject = `curriculum-map:${hashContent([...excludeTitles].sort().join("|"))}`;
+  const meta = buildAiTemplateMeta("topics", native, target, count, subject);
   const cached = await findCachedPayload<CurriculumTopic[]>(meta.request_hash);
   if (cached && cached.length > 0) return cached;
 
-  const topics = await generateTopicsForPair(native, target, count);
+  const topics = await generateTopicsForPair(native, target, count, excludeTitles);
   if (topics.length > 0) await saveCachedPayload(meta, topics);
   return topics;
 }
@@ -160,18 +168,32 @@ export async function ensureSharedCurriculum(params: {
     return { created: 0, skipped: 0 };
   }
 
+  // Collapse AI decks that heavily duplicate older decks of the pair
+  // (e.g. three decks all teaching pronouns)
+  const pairKey = normalizePairKey(`${native}-${target}`);
+  try {
+    const removed = await deduplicateSharedAiDecks(pairKey);
+    if (removed.length > 0) {
+      console.log("Dedup: removed overlapping shared decks:", removed.join(" | "));
+    }
+  } catch (err) {
+    console.warn("Shared deck dedup failed:", err);
+  }
+
   // Stop when the pair already has enough shared decks — random AI topics
   // must not flood the database on every visit
-  const pairKey = normalizePairKey(`${native}-${target}`);
   const existingCount = await countSharedDecksForPair(pairKey);
   if (existingCount >= TARGET_SHARED_DECKS_PER_PAIR) {
     return { created: 0, skipped: existingCount };
   }
 
+  // Already covered themes are passed to the AI so it proposes NEW topics
+  const coveredTitles = await getSharedDeckTitles(pairKey);
   const topics = await getOrGenerateTopics(
     native,
     target,
-    Math.min(6, TARGET_SHARED_DECKS_PER_PAIR - existingCount + 1)
+    Math.min(6, TARGET_SHARED_DECKS_PER_PAIR - existingCount + 1),
+    coveredTitles
   );
   let created = 0;
   let skipped = 0;
@@ -187,7 +209,18 @@ export async function ensureSharedCurriculum(params: {
       continue;
     }
 
-    const result = await createDeckWithCards(userId, deckData, native, {
+    // Drop cards already taught by other decks of the pair
+    const existingFronts = await getExistingCardFronts(userId, pairKey);
+    const freshCards = (deckData.cards || []).filter(
+      (c) => !existingFronts.has(canonicalForm(String(c.front)))
+    );
+    if (freshCards.length < 5) {
+      skipped++;
+      continue;
+    }
+    const cleanedDeck: GeneratedDeckResult = { ...deckData, cards: freshCards };
+
+    const result = await createDeckWithCards(userId, cleanedDeck, native, {
       is_starter: true,
       source: "ai",
       content_hash: contentHash,
@@ -258,7 +291,16 @@ export async function topUpPersonalDecks(params: {
     };
   }
 
-  const result = await createDeckWithCards(userId, deckData, native, {
+  // Skip cards already taught by other decks of the pair
+  const pairKey = normalizePairKey(`${native}-${target}`);
+  const existingFronts = await getExistingCardFronts(userId, pairKey);
+  const freshCards = (deckData.cards || []).filter(
+    (c) => !existingFronts.has(canonicalForm(String(c.front)))
+  );
+  const usableDeck: GeneratedDeckResult =
+    freshCards.length >= 3 ? { ...deckData, cards: freshCards } : deckData;
+
+  const result = await createDeckWithCards(userId, usableDeck, native, {
     is_starter: false,
     // Cache-sourced decks don't count toward the AI spend budget
     source: generated.fromCache ? "ai_cache" : "ai",
@@ -281,7 +323,12 @@ async function generateFreshTopicDeck(
   existingDecks: DeckItem[],
   allowAi = true
 ): Promise<GeneratedSource> {
-  const topics = await getOrGenerateTopics(native, target, 6);
+  const topics = await getOrGenerateTopics(
+    native,
+    target,
+    6,
+    existingDecks.map((d) => d.title)
+  );
   const usedTitles = new Set(existingDecks.map((d) => d.title.toLowerCase().trim()));
 
   const freshTopic = topics.find((t) => !usedTitles.has(t.title.toLowerCase().trim()));
