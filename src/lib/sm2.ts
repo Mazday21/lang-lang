@@ -63,19 +63,14 @@ export function calculateSM2(
   let newInterval = currentInterval;
 
   if (grade === 1) {
-    // Again: reset consecutive repetitions, schedule for tomorrow
+    // Again: reset consecutive repetitions, keep due for review
     newReps = 0;
-    newInterval = 1;
+    newInterval = 0;
   } else if (grade === 2) {
-    // Hard: advance repetitions, but increase interval moderately (1.2x)
-    newReps = currentReps + 1;
-    if (newReps === 1) {
-      newInterval = 1;
-    } else if (newReps === 2) {
-      newInterval = 3;
-    } else {
-      newInterval = Math.max(1, Math.round(currentInterval * 1.2));
-    }
+    // Hard: do not advance consecutive repetitions so clicking "Hard" twice
+    // in the same queue never marks a card as mastered
+    newReps = currentReps;
+    newInterval = currentInterval === 0 ? 0 : Math.max(1, Math.round(currentInterval * 1.2));
   } else if (grade === 3) {
     // Good: standard SM-2 progression
     newReps = currentReps + 1;

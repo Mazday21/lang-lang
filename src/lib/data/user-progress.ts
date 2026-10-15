@@ -12,11 +12,11 @@ import {
  *
  * base_level  — placement test result or manual choice (0..10).
  * study bonus — +1 level per POINTS_PER_LEVEL "knowledge points": every mastered card
- *               (SM-2 repetitions >= 2) weighs its deck's difficulty (1..5).
+ *               (SM-2 repetitions >= 3 and interval >= 6) weighs its deck's difficulty (1..5).
  * So the level grows gradually as words are memorized, and harder decks grow it faster.
  */
 
-export const POINTS_PER_LEVEL = 15;
+export const POINTS_PER_LEVEL = 100;
 
 /**
  * Comfortable daily review plan: enough to make progress, never scary.
@@ -76,14 +76,14 @@ async function readRow(userId: string): Promise<ProgressRow> {
     }
     return {
       proficiency_level: Number(data.proficiency_level ?? 0),
-      base_level: Number(data.proficiency_level ?? 0),
+      base_level: 0,
       placement_tested: Boolean(data.placement_tested ?? false),
     };
   }
 
   return {
     proficiency_level: Number(data.proficiency_level ?? 0),
-    base_level: Number(data.base_level ?? data.proficiency_level ?? 0),
+    base_level: Number(data.base_level ?? 0),
     placement_tested: Boolean(data.placement_tested ?? false),
   };
 }
@@ -156,19 +156,21 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
 
 /**
  * Saves a proficiency level chosen via placement test, manual selection or skip.
- * Sets the base level (0..10); the dynamic level keeps its high-water mark and
- * keeps growing from study results afterwards.
+ * Sets the base level (0..10) and resets proficiency_level to match the chosen base
+ * plus any already earned study bonus.
  */
 export async function savePlacementResult(
   userId: string,
   level: number
 ): Promise<UserProgress> {
-  const row = await readRow(userId);
   const base = clampLevel(level);
+  const { points } = await getUserMasteredPoints(userId);
+  const bonus = Math.floor(points / POINTS_PER_LEVEL);
+  const initialLevel = Math.min(10, base + bonus);
 
   await writeRow(userId, {
     base_level: base,
-    proficiency_level: Math.max(row.proficiency_level, base),
+    proficiency_level: initialLevel,
     placement_tested: true,
   });
 

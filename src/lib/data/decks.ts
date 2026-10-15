@@ -81,6 +81,7 @@ interface MockStore {
       repetitions: number;
       ease_factor: number;
       next_review_at: string;
+      updated_at?: string;
     }
   >;
   todayQueue: Map<
@@ -850,18 +851,28 @@ export async function countUserAiDecksSince(userId: string, sinceIso: string): P
 
 /**
  * Returns learning progress: knowledge points (sum of deck difficulty weights of
- * "mastered" cards) and the count of mastered cards. A card is mastered when it was
- * remembered at least twice in a row (SM-2 repetitions >= 2). Used for dynamic
- * proficiency level growth.
+ * "mastered" cards) and the count of mastered cards.
+ * A card is mastered when it has repetitions >= 3 and interval >= 6 days,
+ * and belongs to the user's reviewed cards (preventing shared starter decks
+ * from granting free levels to new users).
  */
 export async function getUserMasteredPoints(
   userId: string
 ): Promise<{ points: number; masteredCards: number }> {
+  const langs = await getUserLanguages(userId);
+  const activePair =
+    langs.native_language && langs.target_language
+      ? `${langs.native_language}-${langs.target_language}`.toLowerCase()
+      : undefined;
+
   if (!isSupabaseConfigured()) {
     const deckLevels = new Map<string, number>();
     for (const d of Array.from(mockStore.decks.values())) {
-      if (d.user_id === userId || d.is_starter) {
-        deckLevels.set(d.id, d.level || 1);
+      if (
+        (d.user_id === userId || d.is_starter) &&
+        (!activePair || isDeckMatchingPair(d, activePair))
+      ) {
+        deckLevels.set(d.id, Math.min(5, Math.max(1, d.level || 1)));
       }
     }
 
@@ -869,7 +880,12 @@ export async function getUserMasteredPoints(
     let masteredCards = 0;
     for (const c of Array.from(mockStore.cards.values())) {
       const lvl = deckLevels.get(c.deck_id);
-      if (lvl !== undefined && c.repetitions >= 2) {
+      if (
+        lvl !== undefined &&
+        c.user_id === userId &&
+        c.repetitions >= 3 &&
+        c.interval >= 6
+      ) {
         points += lvl;
         masteredCards++;
       }
@@ -881,25 +897,53 @@ export async function getUserMasteredPoints(
 
   const { data: deckRows } = await supabase
     .from("decks")
-    .select("id, level")
+    .select("id, level, language_pair, native_language, target_language")
     .or(`user_id.eq.${userId},is_starter.eq.true`);
 
   const deckLevels = new Map<string, number>();
   for (const d of deckRows || []) {
-    deckLevels.set(d.id, Number(d.level) || 1);
+    if (!activePair || isDeckMatchingPair(d, activePair)) {
+      deckLevels.set(d.id, Math.min(5, Math.max(1, Number(d.level) || 1)));
+    }
   }
   if (deckLevels.size === 0) return { points: 0, masteredCards: 0 };
 
+  // Check review_log so shared starter deck cards are only counted for the user who actually studied them
+  let reviewedCardIds: Set<string> | null = null;
+  try {
+    const { data: logs, error: logErr } = await supabase
+      .from("review_log")
+      .select("card_id")
+      .eq("user_id", userId)
+      .gte("grade", 3)
+      .limit(5000);
+    if (!logErr && logs) {
+      reviewedCardIds = new Set(logs.map((l) => String(l.card_id)));
+    }
+  } catch {
+    reviewedCardIds = null;
+  }
+
+  if (reviewedCardIds !== null && reviewedCardIds.size === 0) {
+    return { points: 0, masteredCards: 0 };
+  }
+
   const { data: cards } = await supabase
     .from("cards")
-    .select("deck_id")
+    .select("id, deck_id, user_id")
     .in("deck_id", Array.from(deckLevels.keys()))
-    .gte("repetitions", 2)
+    .gte("repetitions", 3)
+    .gte("interval", 6)
     .limit(5000);
 
   let points = 0;
   let masteredCards = 0;
   for (const c of cards || []) {
+    if (reviewedCardIds !== null) {
+      if (!reviewedCardIds.has(c.id)) continue;
+    } else if (c.user_id && c.user_id !== userId) {
+      continue;
+    }
     points += deckLevels.get(c.deck_id) || 1;
     masteredCards++;
   }
@@ -907,7 +951,7 @@ export async function getUserMasteredPoints(
 }
 
 /**
- * Counts cards the user already reviewed today (SM-2 repetitions > 0 and updated today).
+ * Counts cards the user already reviewed today.
  * Used to track the daily review plan progress.
  */
 export async function countCardsReviewedToday(userId: string): Promise<number> {
@@ -922,8 +966,8 @@ export async function countCardsReviewedToday(userId: string): Promise<number> {
     }
     let count = 0;
     for (const c of Array.from(mockStore.cards.values())) {
-      if (deckIds.has(c.deck_id) && c.repetitions > 0) {
-        const updated = (c as { updated_at?: string }).updated_at;
+      if (deckIds.has(c.deck_id) && c.user_id === userId && c.repetitions > 0) {
+        const updated = c.updated_at;
         if (updated && updated >= startIso) count++;
       }
     }
@@ -931,6 +975,20 @@ export async function countCardsReviewedToday(userId: string): Promise<number> {
   }
 
   const supabase = getSupabaseAdminClient();
+
+  try {
+    const { data: logs, error: logErr } = await supabase
+      .from("review_log")
+      .select("card_id")
+      .eq("user_id", userId)
+      .gte("reviewed_at", startIso)
+      .limit(5000);
+    if (!logErr && logs) {
+      return new Set(logs.map((l) => String(l.card_id))).size;
+    }
+  } catch {
+    // Fallback if review_log table does not exist
+  }
 
   const { data: deckRows } = await supabase
     .from("decks")
@@ -944,6 +1002,7 @@ export async function countCardsReviewedToday(userId: string): Promise<number> {
     .from("cards")
     .select("id")
     .in("deck_id", deckIds)
+    .eq("user_id", userId)
     .gte("updated_at", startIso)
     .gt("repetitions", 0)
     .limit(5000);
@@ -1571,7 +1630,8 @@ export async function deduplicateSharedAiDecks(
 
 /**
  * Suggestion item for the «похожие колоды» fallback (vector search).
- */export interface DeckSuggestion {
+ */
+export interface DeckSuggestion {
   id: string;
   source: "deck" | "template";
   title: string;
@@ -1702,17 +1762,24 @@ export async function deleteUserDeck(userId: string, deckId: string): Promise<bo
 
 /**
  * Updates a card using SM-2 calculation.
+ * Prevents artificial same-day repetition inflation when reviewing cards ahead of schedule.
  */
 export async function updateCardReview(
   userId: string,
   cardId: string,
   grade: SM2Grade
 ): Promise<{ card: CardItem; sm2Result: ReturnType<typeof calculateSM2> }> {
+  const now = new Date();
+  const nowIso = now.toISOString();
+
   if (!isSupabaseConfigured()) {
     const card = mockStore.cards.get(cardId);
     if (!card || card.user_id !== userId) {
       throw new Error("Card not found");
     }
+
+    const isAlreadyScheduledInFuture =
+      card.repetitions > 0 && new Date(card.next_review_at).getTime() > now.getTime();
 
     const sm2Result = calculateSM2(
       {
@@ -1720,14 +1787,22 @@ export async function updateCardReview(
         repetitions: card.repetitions,
         ease_factor: card.ease_factor,
       },
-      grade
+      grade,
+      now
     );
+
+    if (isAlreadyScheduledInFuture && grade >= 3) {
+      // Do not inflate repetitions multiple times within the same day
+      sm2Result.repetitions = card.repetitions;
+      sm2Result.interval = card.interval;
+      sm2Result.next_review_at = new Date(card.next_review_at);
+    }
 
     card.interval = sm2Result.interval;
     card.repetitions = sm2Result.repetitions;
     card.ease_factor = sm2Result.ease_factor;
     card.next_review_at = sm2Result.next_review_at.toISOString();
-    (card as { updated_at?: string }).updated_at = new Date().toISOString();
+    card.updated_at = nowIso;
 
     mockStore.cards.set(cardId, card);
 
@@ -1749,14 +1824,26 @@ export async function updateCardReview(
     throw new Error("Card not found");
   }
 
+  const isAlreadyScheduledInFuture =
+    (currentCard.repetitions || 0) > 0 &&
+    new Date(currentCard.next_review_at).getTime() > now.getTime();
+
   const sm2Result = calculateSM2(
     {
       interval: currentCard.interval,
       repetitions: currentCard.repetitions,
       ease_factor: currentCard.ease_factor,
     },
-    grade
+    grade,
+    now
   );
+
+  if (isAlreadyScheduledInFuture && grade >= 3) {
+    // Do not inflate repetitions multiple times within the same day
+    sm2Result.repetitions = currentCard.repetitions;
+    sm2Result.interval = currentCard.interval;
+    sm2Result.next_review_at = new Date(currentCard.next_review_at);
+  }
 
   const { data: updatedCard, error: updateErr } = await supabase
     .from("cards")
@@ -1765,7 +1852,7 @@ export async function updateCardReview(
       repetitions: sm2Result.repetitions,
       ease_factor: sm2Result.ease_factor,
       next_review_at: sm2Result.next_review_at.toISOString(),
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
     })
     .eq("id", cardId)
     .select("id, deck_id, front, back, rule_description, interval, repetitions, ease_factor, next_review_at")
