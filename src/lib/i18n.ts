@@ -74,7 +74,6 @@ export const UZ_MAP: Record<string, string> = {
   "Ваш ответ:": "Sizning javobingiz:",
   "Верно!": "To'g'ri!",
   "Ваш ответ верный!": "Javobingiz to'g'ri!",
-  "Есть ошибка": "Xatolik bor",
   "Проверить ответ": "Javobni tekshirish",
   "Ваш перевод или ответ:": "Tarjamangiz yoki javobingiz:",
   "можно писать латиницей или кириллицей":
