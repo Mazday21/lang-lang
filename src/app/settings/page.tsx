@@ -7,14 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   User,
   Sparkles,
   Check,
   RefreshCw,
-  Zap,
   ExternalLink,
   Loader2,
   Globe,
@@ -23,10 +21,8 @@ import { useI18n } from "@/context/i18n-context";
 import { STARS_PRICE } from "@/lib/stars-price";
 import {
   UserLimitStatus,
-  FREE_TRIAL_LIMIT,
   FREE_DAILY_VOICE_LIMIT,
   PRO_DAILY_VOICE_LIMIT,
-  PRO_DAILY_GENERATION_LIMIT,
 } from "@/lib/limits";
 
 export default function SettingsPage() {
@@ -264,9 +260,6 @@ export default function SettingsPage() {
   const isPro = limits?.plan === "pro";
   const voiceUsed = limits?.voice.used ?? 0;
   const voiceLimit = limits?.voice.limit ?? (isPro ? PRO_DAILY_VOICE_LIMIT : FREE_DAILY_VOICE_LIMIT);
-  const voicePercent = voiceLimit > 0 ? Math.min(100, Math.round((voiceUsed / voiceLimit) * 100)) : 0;
-  const genUsed = limits?.generation.used ?? 0;
-  const genPercent = Math.min(100, Math.round((genUsed / PRO_DAILY_GENERATION_LIMIT) * 100));
 
   return (
     <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-6 max-w-lg mx-auto flex flex-col gap-5">
@@ -303,80 +296,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* AI Limits Card */}
-      <Card className="border-[#DCD0F5] bg-white rounded-2xl shadow-none">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Zap className="h-4 w-4 text-[#B7A0F6]" />
-              {t("Лимиты ИИ")}
-            </CardTitle>
-            <Badge variant={isPro ? "secondary" : "outline"} className="text-[10px]">
-              {isPro ? "Pro" : "Free"}
-            </Badge>
-          </div>
-          <CardDescription className="text-xs">
-            {isPro
-              ? t("Ежедневные лимиты: 60 голосовых проверок и 5 генераций колод")
-              : t("Пробный лимит: 5 AI-проверок на аккаунт • генерация колод в Pro")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-0">
-          {isLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-3 w-full rounded-full" />
-              <Skeleton className="h-3 w-full rounded-full" />
-            </div>
-          ) : (
-            <>
-              {/* Voice checks quota */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium text-[#2A2352]">{t("AI-проверки голоса")}</span>
-                  <span className="text-[#7B6FA6]">
-                    {t("{a} из {b} /день", { a: voiceUsed, b: voiceLimit })}
-                  </span>
-                </div>
-                <div className="w-full bg-[#DCD0F5] h-2 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-300 rounded-full ${
-                      voicePercent >= 100 ? "bg-[#F9D7DD]" : "bg-[#B9EBDD]"
-                    }`}
-                    style={{ width: `${voicePercent}%` }}
-                  />
-                </div>
-                {!isPro && (
-                  <p className="text-[11px] text-[#7B6FA6]">
-                    {t("Пробных проверок на аккаунт осталось: {n}", {
-                      n: limits?.remaining ?? FREE_TRIAL_LIMIT,
-                    })}
-                  </p>
-                )}
-              </div>
-
-              {/* Generation quota */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium text-[#2A2352]">{t("Генерация колод с помощью ИИ")}</span>
-                  <span className="text-[#7B6FA6]">
-                    {isPro
-                      ? t("{a} из {b} /день", { a: genUsed, b: PRO_DAILY_GENERATION_LIMIT })
-                      : t("Доступно в Pro")}
-                  </span>
-                </div>
-                <div className="w-full bg-[#DCD0F5] h-2 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-300 rounded-full ${
-                      genPercent >= 100 ? "bg-[#F9D7DD]" : "bg-[#B7A0F6]"
-                    }`}
-                    style={{ width: `${isPro ? genPercent : 0}%` }}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      
 
       {/* Pro Subscription Offer */}
       <Card className="border-[#DCD0F5] bg-white rounded-2xl shadow-none">

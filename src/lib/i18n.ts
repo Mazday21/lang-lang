@@ -394,6 +394,17 @@ export const UZ_MAP: Record<string, string> = {
   Своя: "Shaxsiy",
   "Колода не найдена": "To'plam topilmadi",
 
+  // ── Flashcard flip flow (no AI) ──────────────────────
+  Проверить: "Tekshirish",
+  Перевод: "Tarjima",
+  "Не помню": "Esimda yo'q",
+  "Вспомните перевод, затем нажмите «Проверить»":
+    "Tarjamani eslang, so'ng «Tekshirish» tugmasini bosing",
+  "Оцените запоминание — и следующая карточка появится автоматически":
+    "Eslab qolishni baholang — keyingi kartochka avtomatik paydo bo'ladi",
+  "Создайте первую колоду сами — добавьте слова и фразы, которые хотите выучить.":
+    "Birinchi to'plamni o'zingiz yarating — o'rganmoqchi bo'lgan so'z va iboralarni qo'shing.",
+
   // ── Telegram Stars payments ──────────────────────────
   "Оплата принята! Pro активирован ✅": "To'lov qabul qilindi! Pro faollashtirildi ✅",
   "Оплата отменена": "To'lov bekor qilindi",

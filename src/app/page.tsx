@@ -25,14 +25,10 @@ import {
 } from "lucide-react";
 import { DeckItem } from "@/lib/data/decks";
 import { computeMixShares } from "@/lib/utils/today-mix";
-import { UserLimitStatus } from "@/lib/limits";
 import { UserProgress, DAILY_REVIEW_LIMIT } from "@/lib/data/user-progress";
 import { proficiencyLabel } from "@/lib/data/placement-tests";
-import { CreateDeckModal } from "@/components/create-deck-modal";
 import { ManualDeckModal } from "@/components/manual-deck-modal";
 import { isLocalDeckId, deleteLocalDeck, getLocalDeckItems } from "@/lib/local-decks";
-import { PaywallModal } from "@/components/paywall-modal";
-import { DailyLimitModal } from "@/components/daily-limit-modal";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { LanguageSwitcherModal } from "@/components/language-switcher-modal";
 import { PlacementTestModal, PlacementMode } from "@/components/placement-test-modal";
@@ -51,16 +47,11 @@ export default function HubPage() {
   } = useAuth();
 
   const [decks, setDecks] = useState<DeckItem[]>([]);
-  const [limits, setLimits] = useState<UserLimitStatus | null>(null);
   const [isLoadingDecks, setIsLoadingDecks] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   // Modals state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
-  const [paywallMode, setPaywallMode] = useState<"generator" | "trial" | "upsell">("upsell");
-  const [showDailyLimit, setShowDailyLimit] = useState(false);
   const [isLanguageSwitcherOpen, setIsLanguageSwitcherOpen] = useState(false);
 
   // Proficiency level (0..10) + placement test
@@ -132,9 +123,8 @@ export default function HubPage() {
         const tar = cleanCode(overrideTarget || user?.target_language, "uz");
         const pair = `${nat}-${tar}`.toLowerCase();
 
-        const [decksRes, limitsRes, progressRes] = await Promise.all([
+        const [decksRes, progressRes] = await Promise.all([
           fetch(`/api/decks?pair=${pair}`, { headers }),
-          fetch("/api/user/limits", { headers }),
           fetch("/api/user/progress", { headers }),
         ]);
 
@@ -144,11 +134,6 @@ export default function HubPage() {
           // Manually created decks live only on this device (localStorage)
           const localItems = getLocalDeckItems(pair);
           setDecks([...localItems, ...(decksData.decks || [])]);
-        }
-
-        const limitsData = await limitsRes.json();
-        if (limitsData.success) {
-          setLimits(limitsData);
         }
 
         const progressData = await progressRes.json().catch(() => null);
@@ -387,41 +372,6 @@ export default function HubPage() {
         onCreated={() => fetchDecksAndLimits()}
       />
 
-      {/* Create Deck AI Modal */}
-      <CreateDeckModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        token={token}
-        onLimitExceeded={(reason?: string) => {
-          // Daily limit → soft "rest until tomorrow" stub; otherwise the paywall
-          // with context-aware copy (generator is Pro-only vs trial exhausted)
-          if (reason === "daily") {
-            setShowDailyLimit(true);
-          } else {
-            setPaywallMode(reason === "pro_only" ? "generator" : "trial");
-            setIsPaywallOpen(true);
-          }
-        }}
-        nativeLang={nativeLang}
-        targetLang={targetLang}
-      />
-
-      {/* Soft daily limit stub */}
-      <DailyLimitModal
-        isOpen={showDailyLimit}
-        kind="generation"
-        onClose={() => setShowDailyLimit(false)}
-      />
-
-      {/* Soft Paywall Modal */}
-      <PaywallModal
-        isOpen={isPaywallOpen}
-        mode={paywallMode}
-        onClose={() => setIsPaywallOpen(false)}
-        onPaid={() => fetchDecksAndLimits()}
-        token={token}
-      />
-
       {/* Calm Header with Language Pair Badge */}
       <header className="flex items-center justify-between pb-2 border-b border-[#DCD0F5]">
         <div>
@@ -593,33 +543,6 @@ export default function HubPage() {
         </Card>
       )}
 
-      {/* AI Deck Builder Action Button (Pro) / CTA for free accounts */}
-      {limits?.plan === "pro" ? (
-        <Button
-          variant="secondary"
-          size="lg"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="w-full text-sm font-semibold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-[#B7A0F6] text-[#2A2352] hover:bg-[#9C82F0]"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>{t("Сгенерировать колоду с помощью AI")}</span>
-        </Button>
-      ) : (
-        <Button
-          variant="secondary"
-          size="lg"
-          onClick={() => {
-          setPaywallMode("upsell");
-          setIsPaywallOpen(true);
-        }}
-          className="w-full text-sm font-bold h-14 rounded-2xl shadow-none flex items-center justify-center gap-2 bg-gradient-to-r from-[#B7A0F6] to-[#9FE2CE] text-[#2A2352] hover:opacity-90"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>{t("Попробовать ИИ-суперсилы")}</span>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      )}
-
       {/* Manual deck creation — stored locally on this device only */}
       <Button
         variant="outline"
@@ -680,36 +603,20 @@ export default function HubPage() {
               </h3>
               <p className="text-xs text-[#7B6FA6] leading-relaxed max-w-xs mx-auto">
                 {t(
-                  "Давайте создадим первую с помощью ИИ! Назовите любую тему — от приветствий до покупок."
+                  "Создайте первую колоду сами — добавьте слова и фразы, которые хотите выучить."
                 )}
               </p>
             </div>
             <div className="pt-2">
-              {limits?.plan === "pro" ? (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>{t("Создать колоду ({pair})", { pair: pairLabel })}</span>
-                </Button>
-              ) : (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => {
-          setPaywallMode("upsell");
-          setIsPaywallOpen(true);
-        }}
-                  className="w-full text-xs font-bold h-12 rounded-2xl flex items-center justify-center gap-2 bg-gradient-to-r from-[#B7A0F6] to-[#9FE2CE] text-[#2A2352] hover:opacity-90"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span>{t("Попробовать ИИ-суперсилы")}</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => setIsManualModalOpen(true)}
+                className="w-full text-xs font-semibold h-12 rounded-2xl flex items-center justify-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{t("Добавить свою колоду вручную")}</span>
+              </Button>
             </div>
           </Card>
         ) : (
