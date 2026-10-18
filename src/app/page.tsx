@@ -9,30 +9,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  BookOpen,
   ChevronRight,
   Sparkles,
   RefreshCw,
   Terminal,
   CheckCircle2,
   Settings,
-  Zap,
   Trash2,
   Plus,
   ChevronDown,
-  Gauge,
   Shuffle,
 } from "lucide-react";
 import { DeckItem } from "@/lib/data/decks";
-import { computeMixShares } from "@/lib/utils/today-mix";
 import { UserProgress, DAILY_REVIEW_LIMIT } from "@/lib/data/user-progress";
-import { proficiencyLabel } from "@/lib/data/placement-tests";
 import { ManualDeckModal } from "@/components/manual-deck-modal";
 import { isLocalDeckId, deleteLocalDeck, getLocalDeckItems } from "@/lib/local-decks";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HowToScreen } from "@/components/how-to-screen";
 import { LanguageSwitcherModal } from "@/components/language-switcher-modal";
-import { PlacementTestModal, PlacementMode } from "@/components/placement-test-modal";
 
 export default function HubPage() {
   const router = useRouter();
@@ -57,9 +51,8 @@ export default function HubPage() {
   // null until checked on the client (avoids SSR mismatch)
   const [howToSeen, setHowToSeen] = useState<boolean | null>(null);
 
-  // Proficiency level (0..10) + placement test
+  // Study statistics (daily plan progress)
   const [progress, setProgress] = useState<UserProgress | null>(null);
-  const [isTestOpen, setIsTestOpen] = useState(false);
 
   // Helper to normalize language code (strictly turns "gb" into "en")
   const cleanCode = (code?: string | null, fallback = "ru") => {
@@ -72,11 +65,9 @@ export default function HubPage() {
   // Active language pair
   const nativeLang = cleanCode(user?.native_language, "ru");
   const targetLang = cleanCode(user?.target_language, "uz");
-  const currentPairKey = `${nativeLang}-${targetLang}`;
-
   const pairLabel = `${nativeLang.toUpperCase()} ➔ ${targetLang.toUpperCase()}`;
 
-  // Deck difficulty levels
+  // Deck difficulty levels (content metadata — not user levels)
   const LEVEL_NAMES: Record<number, string> = {
     1: "Новичок",
     2: "Базовый",
@@ -86,17 +77,7 @@ export default function HubPage() {
   };
   const levelName = (level: number) => LEVEL_NAMES[level] || "Эксперт";
 
-  // Proficiency (0..10) → recommended deck difficulty (1..5)
-  const proficiency = progress?.proficiency_level ?? 0;
-  const recommendedLevel = Math.min(5, Math.floor(proficiency / 2) + 1);
-
-  // "Колода на сегодня" mix display — the same algorithm as the server mixer
-  const mixShares = computeMixShares(
-    decks.map((d) => d.level || 1),
-    recommendedLevel
-  );
-
-  // Group decks by difficulty level, recommended groups first
+  // Group decks by difficulty level
   const decksByLevel = [...decks]
     .sort((a, b) => (a.level || 1) - (b.level || 1))
     .reduce<Record<number, DeckItem[]>>((acc, deck) => {
@@ -105,12 +86,7 @@ export default function HubPage() {
       acc[lvl].push(deck);
       return acc;
     }, {});
-  const levelGroups = Object.keys(decksByLevel)
-    .map(Number)
-    .sort(
-      (a, b) =>
-        Math.abs(a - recommendedLevel) - Math.abs(b - recommendedLevel) || a - b
-    );
+  const levelGroups = Object.keys(decksByLevel).map(Number).sort((a, b) => a - b);
 
   const fetchDecksAndLimits = useCallback(
     async (overrideNative?: string, overrideTarget?: string) => {
@@ -142,9 +118,6 @@ export default function HubPage() {
         const progressData = await progressRes.json().catch(() => null);
         if (progressData?.success) {
           setProgress({
-            proficiency_level: progressData.proficiency_level ?? 0,
-            base_level: progressData.base_level ?? 0,
-            placement_tested: Boolean(progressData.placement_tested),
             learned_points: progressData.learned_points ?? 0,
             mastered_cards: progressData.mastered_cards ?? 0,
             reviewed_today: progressData.reviewed_today ?? 0,
@@ -167,9 +140,6 @@ export default function HubPage() {
       fetchDecksAndLimits();
     }
   }, [isAuthLoading, fetchDecksAndLimits]);
-
-  // True when the user picked languages via the onboarding wizard in this session
-  const skipLangStepRef = useRef(false);
 
   // Background content pipeline: fills shared curriculum + personal top-up decks.
   // Runs at most once per language pair per session; never blocks the UI.
@@ -207,8 +177,6 @@ export default function HubPage() {
   }, [isAuthLoading, user, token, fetchDecksAndLimits]);
 
   const handleCompleteOnboarding = async (native: string, target: string) => {
-    // Languages were just chosen — no need to ask again before the mini-test
-    skipLangStepRef.current = true;
     await setLanguages(native, target);
     await fetchDecksAndLimits(native, target);
   };
@@ -216,57 +184,6 @@ export default function HubPage() {
   const handleSwitchLanguagePair = async (newNative: string, newTarget: string) => {
     await setLanguages(newNative, newTarget);
     await fetchDecksAndLimits(newNative, newTarget);
-  };
-
-  // Saves placement result (test / manual / skip); the server re-scores the answers
-  // and grows the level dynamically from study results afterwards.
-  const handlePlacementComplete = async (
-    level: number,
-    mode: PlacementMode,
-    answers: number[],
-    pair?: string
-  ) => {
-    // Optimistic update so the modal closes smoothly
-    setProgress((prev) => ({
-      proficiency_level: Math.max(prev?.proficiency_level ?? 0, level),
-      base_level: mode === "skip" ? prev?.base_level ?? 0 : level,
-      placement_tested: true,
-      learned_points: prev?.learned_points ?? 0,
-      mastered_cards: prev?.mastered_cards ?? 0,
-      reviewed_today: prev?.reviewed_today ?? 0,
-      queue_total: prev?.queue_total ?? 0,
-      queue_remaining: prev?.queue_remaining ?? 0,
-    }));
-    try {
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const body =
-        mode === "test"
-          ? { pair: pair || currentPairKey, answers }
-          : mode === "manual"
-          ? { level }
-          : { skip: true };
-      const res = await fetch("/api/user/progress", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => null);
-      if (data?.success) {
-        setProgress({
-          proficiency_level: data.proficiency_level ?? level,
-          base_level: data.base_level ?? level,
-          placement_tested: Boolean(data.placement_tested),
-          learned_points: data.learned_points ?? 0,
-          mastered_cards: data.mastered_cards ?? 0,
-          reviewed_today: data.reviewed_today ?? 0,
-          queue_total: data.queue_total ?? 0,
-          queue_remaining: data.queue_remaining ?? 0,
-        });
-      }
-    } catch {
-      // Keep the optimistic value on network errors
-    }
   };
 
   const handleDeleteDeck = async (deckId: string) => {
@@ -330,11 +247,6 @@ export default function HubPage() {
     (!user.native_language || !user.target_language)
   );
 
-  // New users without a proficiency level take the placement mini-test first
-  const needsPlacement = Boolean(
-    user && !isAuthLoading && !needsOnboarding && progress && !progress.placement_tested
-  );
-
   if (isAuthLoading) {
     return (
       <main className="min-h-screen bg-[#F4EFFE] p-6 max-w-lg mx-auto flex flex-col justify-center gap-4">
@@ -371,17 +283,6 @@ export default function HubPage() {
 
   return (
     <main className="min-h-screen bg-[#F4EFFE] text-[#2A2352] px-4 py-6 md:py-10 max-w-lg mx-auto flex flex-col gap-5">
-      {/* Placement Mini-Test Modal (language banner → test for new users) */}
-      <PlacementTestModal
-        isOpen={isTestOpen || needsPlacement}
-        pairKey={currentPairKey}
-        startWithLanguage={needsPlacement && !skipLangStepRef.current}
-        onLanguagesChange={handleSwitchLanguagePair}
-        onComplete={handlePlacementComplete}
-        onClose={() => setIsTestOpen(false)}
-        canClose={!needsPlacement || isTestOpen}
-      />
-
       {/* Language Switcher Modal */}
       <LanguageSwitcherModal
         isOpen={isLanguageSwitcherOpen}
@@ -498,35 +399,6 @@ export default function HubPage() {
                     })}
               </p>
             )}
-            <div className="flex items-center gap-2 pt-0.5 flex-wrap">
-              <span className="text-xs text-[#7B6FA6] flex items-center gap-1 whitespace-nowrap">
-                <Gauge className="h-3 w-3 text-[#B7A0F6]" />
-                {t("Уровень владения:")}{" "}
-                {progress
-                  ? `${progress.proficiency_level}/10 · ${t(
-                      proficiencyLabel(progress.proficiency_level)
-                    )}`
-                  : "—"}
-                {progress && progress.proficiency_level > progress.base_level && (
-                  <span className="text-[#1D6B5B]">
-                    {" "}
-                    {t("(+{n} за обучение)", {
-                      n: progress.proficiency_level - progress.base_level,
-                    })}
-                  </span>
-                )}
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsTestOpen(true);
-                }}
-                className="text-[11px] text-[#7B6FA6] underline hover:text-[#2A2352] transition-colors"
-              >
-                {progress?.placement_tested ? t("Пройти заново") : t("Пройти тест")}
-              </button>
-            </div>
           </div>
           <div className="h-12 w-12 rounded-2xl bg-[#EFE9FC] flex items-center justify-center text-[#2A2352]">
             <Sparkles className="h-6 w-6 text-[#B7A0F6]" />
@@ -546,23 +418,8 @@ export default function HubPage() {
                 {t("Колода на сегодня")}
               </p>
               <p className="text-sm font-semibold text-[#2A2352]">
-                {t("Микс карт из ваших колод под ваш уровень")}
+                {t("Случайный микс карт из всех ваших колод")}
               </p>
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                {mixShares.map((s) => (
-                  <Badge
-                    key={s.level}
-                    variant="outline"
-                    className={`text-[10px] py-0 px-1.5 font-normal whitespace-nowrap ${
-                      s.level === recommendedLevel
-                        ? "text-[#2A2352] border-[#B7A0F6] bg-white"
-                        : "text-[#7B6FA6] border-[#DCD0F5] bg-white/70"
-                    }`}
-                  >
-                    {Math.round(s.percent * 100)}% · {t("Уровень")} {s.level}
-                  </Badge>
-                ))}
-              </div>
             </div>
             <div className="h-10 w-10 rounded-2xl bg-white flex items-center justify-center shrink-0">
               <Shuffle className="h-5 w-5 text-[#B7A0F6]" />
@@ -653,19 +510,11 @@ export default function HubPage() {
               <div key={level} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider whitespace-nowrap">
-                    {t("Уровень {level} · {name}", {
+                    {t("Сложность {level} · {name}", {
                       level,
                       name: t(levelName(level)),
                     })}
                   </span>
-                  {level === recommendedLevel && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] py-0 px-1.5 font-normal text-[#1D6B5B] border-[#B9EBDD] bg-[#E3F7EF] whitespace-nowrap"
-                    >
-                      {t("Рекомендуем")}
-                    </Badge>
-                  )}
                   <div className="flex-1 h-px bg-[#DCD0F5]" />
                   <span className="text-[11px] text-[#7B6FA6] whitespace-nowrap">
                     {decksByLevel[level].length} {t("колод")}
@@ -689,7 +538,7 @@ export default function HubPage() {
                           variant="outline"
                           className="text-[10px] py-0 px-1.5 font-normal text-[#2A2352] border-[#B7A0F6] bg-[#F0EAFB] whitespace-nowrap"
                         >
-                          {t("Уровень {level} · {name}", {
+                          {t("Сложность {level} · {name}", {
                             level: deck.level || 1,
                             name: t(levelName(deck.level || 1)),
                           })}

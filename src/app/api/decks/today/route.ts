@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserIdFromRequest } from "@/lib/auth/get-user-id";
-import { getTodayDeckCards, getTodayQueueCards } from "@/lib/data/decks";
-import { getUserProgress } from "@/lib/data/user-progress";
-import { getUserLanguages } from "@/lib/data/decks";
+import { getTodayDeckCards, getTodayQueueCards, getUserLanguages } from "@/lib/data/decks";
 import { normalizePairKey } from "@/lib/utils/language";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +13,10 @@ const TARGET_NAMES: Record<string, string> = {
 };
 
 /**
- * GET /api/decks/today — "Колода на сегодня": a mixed session of real cards
- * from the user's decks of the current language pair, distributed by difficulty:
- * 60% of the user's level, 20% above, 20% below (with documented edge cases).
- * Cards are real (SM-2 reviews work as usual).
+ * GET /api/decks/today — "Колода на сегодня": a randomly composed session of
+ * real cards from the user's decks of the current language pair.
+ * Cards are real (SM-2 reviews work as usual); the saved queue is reused
+ * while cards remain in it.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -33,13 +31,9 @@ export async function GET(req: NextRequest) {
       searchParams.get("pair") || `${langs.native_language || "ru"}-${langs.target_language || "uz"}`
     );
 
-    // The user's difficulty level follows the same rule as the hub's recommendation
-    const progress = await getUserProgress(userId);
-    const userLevel = Math.min(5, Math.max(1, Math.floor(progress.proficiency_level / 2) + 1));
-
     // Today's saved queue has first priority — reuse it while cards remain
-    const queued = await getTodayQueueCards(userId, userLevel);
-    const result = queued ?? (await getTodayDeckCards(userId, pairKey, userLevel));
+    const queued = await getTodayQueueCards(userId);
+    const cards = queued ?? (await getTodayDeckCards(userId, pairKey)).cards;
     const targetCode = pairKey.split("-")[1] || "uz";
 
     return NextResponse.json({
@@ -47,12 +41,10 @@ export async function GET(req: NextRequest) {
       deck: {
         id: "today",
         title: "Колода на сегодня",
-        description: "Перемешанные карты из ваших колод под ваш уровень сложности",
+        description: "Случайный микс карт из ваших колод",
         target_language: TARGET_NAMES[targetCode] || "узбекский",
       },
-      cards: result.cards,
-      distribution: result.distribution,
-      user_level: result.user_level,
+      cards,
       from_queue: Boolean(queued),
     });
   } catch (err: unknown) {

@@ -394,6 +394,12 @@ export const UZ_MAP: Record<string, string> = {
   Своя: "Shaxsiy",
   "Колода не найдена": "To'plam topilmadi",
 
+  // ── No levels / no payments ──────────────────────────
+  Профиль: "Profil",
+  "Сложность {level} · {name}": "Qiyinlik {level} · {name}",
+  "Случайный микс карт из всех ваших колод":
+    "Barcha to'plamlaringizdan tasodifiy aralashma",
+
   // ── First-run «how to use» screen ────────────────────
   "Как пользоваться LangLang": "LangLang qanday ishlatiladi",
   "Всего 3 шага — и слова запоминаются надолго, а не «на завтра»":
@@ -408,8 +414,8 @@ export const UZ_MAP: Record<string, string> = {
   "«Не помню» или «Легко» — умный алгоритм SM-2 сам подстроит интервал повторения.":
     "«Esimda yo'q» yoki «Oson» — aqlli SM-2 algoritmi takrorlash intervalini o'zi sozlaydi.",
   "4. 15 карточек в день": "4. Kuniga 15 ta kartochka",
-  "«Колода на сегодня» сама соберёт нужный микс: слова вернутся ровно тогда, когда начнёшь их забывать.":
-    "«Bugungi to'plam» kerakli aralashmani o'zi yig'adi: so'zlar aynan unuta boshlaganingizda qaytadi.",
+  "«Колода на сегодня» — случайный микс из всех колод: слова вернутся ровно тогда, когда начнёшь их забывать.":
+    "«Bugungi to'plam» — barcha to'plamlardan tasodifiy aralashma: so'zlar aynan unuta boshlaganingizda qaytadi.",
   "Что это даёт": "Bu nimaga yordam beradi",
   "Слова остаются в памяти надолго — повторения приходят в нужный момент":
     "So'zlar xotirada uzoq qoladi — takrorlashlar aynan kerakli paytda keladi",

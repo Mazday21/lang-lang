@@ -38,9 +38,6 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
   const [isSubmittingGrade, setIsSubmittingGrade] = useState<boolean>(false);
   const [reviewedCount, setReviewedCount] = useState<number>(0);
 
-  // Dynamic proficiency level shown on the session-complete screen
-  const [sessionLevel, setSessionLevel] = useState<number | null>(null);
-
   // Native Telegram Back Button
   useEffect(() => {
     const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
@@ -111,23 +108,6 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       loadDeckCards();
     }
   }, [isAuthLoading, loadDeckCards]);
-
-  // When the session is over, fetch the (possibly grown) proficiency level
-  useEffect(() => {
-    const isDone = !isLoading && cards.length > 0 && currentIndex >= cards.length;
-    if (!isDone || !token) return;
-    (async () => {
-      try {
-        const res = await fetch("/api/user/progress", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => null);
-        if (data?.success) setSessionLevel(data.proficiency_level ?? null);
-      } catch {
-        // Non-critical: level display is optional
-      }
-    })();
-  }, [isLoading, cards.length, currentIndex, token]);
 
   const currentCard = cards[currentIndex];
   const isFinished = !isLoading && cards.length > 0 && currentIndex >= cards.length;
@@ -232,11 +212,6 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
             <p className="text-xs text-[#7B6FA6] leading-relaxed">
               {t("Повторено карточек: {n}. Все интервалы повторения пересчитаны по алгоритму SM-2.", { n: reviewedCount })}
             </p>
-            {sessionLevel !== null && (
-              <p className="text-xs text-[#2A2352] font-medium pt-1">
-                {t("Уровень владения: {n}/10", { n: sessionLevel })}
-              </p>
-            )}
           </div>
           <div className="pt-2 flex flex-col gap-2">
             <Button

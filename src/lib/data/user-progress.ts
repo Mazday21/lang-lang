@@ -1,22 +1,14 @@
-import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import {
-  isSupabaseConfigured,
   getUserMasteredPoints,
   countCardsReviewedToday,
   getTodayQueueStatus,
 } from "@/lib/data/decks";
 
 /**
- * Dynamic proficiency level (0..10):
- *   proficiency_level = base_level + study bonus (monotonic, never decreases).
- *
- * base_level  — placement test result or manual choice (0..10).
- * study bonus — +1 level per POINTS_PER_LEVEL "knowledge points": every mastered card
- *               (SM-2 repetitions >= 3 and interval >= 6) weighs its deck's difficulty (1..5).
- * So the level grows gradually as words are memorized, and harder decks grow it faster.
+ * Study statistics — no user levels, no placement, no plans.
+ * Just what the user has actually done: reviewed cards, mastered words and
+ * how much of today's queue is left.
  */
-
-export const POINTS_PER_LEVEL = 100;
 
 /**
  * Comfortable daily review plan: enough to make progress, never scary.
@@ -25,154 +17,25 @@ export const POINTS_PER_LEVEL = 100;
 export const DAILY_REVIEW_LIMIT = 15;
 
 export interface UserProgress {
-  proficiency_level: number; // current dynamic level (0..10), shown in the UI
-  base_level: number;        // from placement test / manual choice
-  placement_tested: boolean;
   learned_points: number;    // knowledge points earned by studying
-  mastered_cards: number;
+  mastered_cards: number;    // cards with stable SM-2 memory
   reviewed_today: number;    // cards already reviewed today (daily plan progress)
   queue_total: number;       // size of today's saved mix queue («Колода на сегодня»)
   queue_remaining: number;   // queue cards left — first priority in «Повторение на сегодня»
 }
 
-interface ProgressRow {
-  proficiency_level: number;
-  base_level: number;
-  placement_tested: boolean;
-}
-
-// In-memory fallback for local dev mode (globalThis: survives per-route module copies)
-const mockRows = (globalThis as unknown as { __mockProgress?: Map<string, ProgressRow> }).__mockProgress ||
-  ((globalThis as unknown as { __mockProgress?: Map<string, ProgressRow> }).__mockProgress = new Map());
-
-const clampLevel = (n: number) => Math.min(10, Math.max(0, Math.round(n)));
-
-async function readRow(userId: string): Promise<ProgressRow> {
-  if (!isSupabaseConfigured()) {
-    return mockRows.get(userId) || { proficiency_level: 0, base_level: 0, placement_tested: false };
-  }
-
-  const supabase = getSupabaseAdminClient();
-  const primary = await supabase
-    .from("users")
-    .select("proficiency_level, base_level, placement_tested")
-    .eq("id", userId)
-    .maybeSingle();
-
-  let data: any = primary.data;
-  let error = primary.error;
-
-  if (error || !data) {
-    // Legacy tables without base_level column
-    const legacy = await supabase
-      .from("users")
-      .select("proficiency_level, placement_tested")
-      .eq("id", userId)
-      .maybeSingle();
-    data = legacy.data;
-    error = legacy.error;
-    if (error || !data) {
-      return { proficiency_level: 0, base_level: 0, placement_tested: false };
-    }
-    return {
-      proficiency_level: Number(data.proficiency_level ?? 0),
-      base_level: 0,
-      placement_tested: Boolean(data.placement_tested ?? false),
-    };
-  }
-
-  return {
-    proficiency_level: Number(data.proficiency_level ?? 0),
-    base_level: Number(data.base_level ?? 0),
-    placement_tested: Boolean(data.placement_tested ?? false),
-  };
-}
-
-async function writeRow(userId: string, row: ProgressRow): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    mockRows.set(userId, row);
-    return;
-  }
-
-  const supabase = getSupabaseAdminClient();
-  const payload = {
-    proficiency_level: row.proficiency_level,
-    base_level: row.base_level,
-    placement_tested: row.placement_tested,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabase.from("users").update(payload).eq("id", userId);
-  if (error) {
-    // Legacy tables without base_level/placement_tested columns
-    const fallback = await supabase
-      .from("users")
-      .update({
-        proficiency_level: row.proficiency_level,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-    if (fallback.error) {
-      throw new Error(fallback.error.message);
-    }
-  }
-}
-
-/**
- * Returns the user's progress and grows the dynamic level from study results
- * (monotonic: the level never decreases).
- */
 export async function getUserProgress(userId: string): Promise<UserProgress> {
-  const row = await readRow(userId);
   const [{ points, masteredCards }, reviewedToday, queue] = await Promise.all([
     getUserMasteredPoints(userId),
     countCardsReviewedToday(userId),
     getTodayQueueStatus(userId),
   ]);
 
-  const bonus = Math.floor(points / POINTS_PER_LEVEL);
-  const target = Math.min(10, row.base_level + bonus);
-  const level = Math.max(row.proficiency_level, target);
-
-  if (level !== row.proficiency_level) {
-    try {
-      await writeRow(userId, { ...row, proficiency_level: level });
-    } catch (err) {
-      console.warn("Failed to persist proficiency level:", err);
-    }
-  }
-
   return {
-    proficiency_level: level,
-    base_level: row.base_level,
-    placement_tested: row.placement_tested,
     learned_points: points,
     mastered_cards: masteredCards,
     reviewed_today: reviewedToday,
     queue_total: queue.total,
     queue_remaining: queue.remaining,
   };
-}
-
-/**
- * Saves a proficiency level chosen via placement test, manual selection or skip.
- * Sets the base level (0..10) and resets proficiency_level to match the chosen base
- * plus any already earned study bonus.
- */
-export async function savePlacementResult(
-  userId: string,
-  level: number
-): Promise<UserProgress> {
-  const base = clampLevel(level);
-  const { points } = await getUserMasteredPoints(userId);
-  const bonus = Math.floor(points / POINTS_PER_LEVEL);
-  const initialLevel = Math.min(10, base + bonus);
-
-  await writeRow(userId, {
-    base_level: base,
-    proficiency_level: initialLevel,
-    placement_tested: true,
-  });
-
-  return getUserProgress(userId);
 }
