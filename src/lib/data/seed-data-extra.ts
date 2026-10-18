@@ -6,6 +6,7 @@ import { EXTRA_UZ_EN } from "./seed-data-extra-uz-en";
 import { EXTRA_RU_IT } from "./seed-data-extra-ru-it";
 import { EXTRA_UZ_IT } from "./seed-data-extra-uz-it";
 import { EXTRA_VERBS } from "./seed-data-extra-verbs";
+import { UZ_CONJUGATION } from "./seed-data-conjugation";
 
 /**
  * Extra seed decks that triple the amount of cards per language pair
@@ -15,7 +16,7 @@ import { EXTRA_VERBS } from "./seed-data-extra-verbs";
  * at the bottom of seed-data.ts.
  */
 export const EXTRA_DECKS: Record<string, SeedDeck[]> = {
-  "ru-uz": [...EXTRA_RU_UZ, ...(EXTRA_VERBS["ru-uz"] || [])],
+  "ru-uz": [...EXTRA_RU_UZ, ...(EXTRA_VERBS["ru-uz"] || []), ...UZ_CONJUGATION],
   "ru-en": [...EXTRA_RU_EN, ...(EXTRA_VERBS["ru-en"] || [])],
   "uz-ru": [...EXTRA_UZ_RU, ...(EXTRA_VERBS["uz-ru"] || [])],
   "uz-en": [...EXTRA_UZ_EN, ...(EXTRA_VERBS["uz-en"] || [])],
