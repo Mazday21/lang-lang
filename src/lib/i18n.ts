@@ -394,6 +394,31 @@ export const UZ_MAP: Record<string, string> = {
   Своя: "Shaxsiy",
   "Колода не найдена": "To'plam topilmadi",
 
+  // ── First-run «how to use» screen ────────────────────
+  "Как пользоваться LangLang": "LangLang qanday ishlatiladi",
+  "Всего 3 шага — и слова запоминаются надолго, а не «на завтра»":
+    "Faqat 3 qadam — va so'zlar «ertaga» uchun emas, uzoqqa esda qoladi",
+  "1. Смотри карточку": "1. Kartochkaga qarang",
+  "Вспомни перевод слова или фразы — и только потом нажимай «Проверить».":
+    "So'z yoki ibora tarjamasi eslang — faqat undan keyin «Tekshirish» tugmasini bosing.",
+  "2. Проверяй перевод": "2. Tarjimani tekshiring",
+  "Ответ и грамматическое правило появятся сразу после проверки.":
+    "Javob va grammatik qoida tekshiruvdan so'ng darhol paydo bo'ladi.",
+  "3. Оцени, как вспомнилось": "3. Qanday eslaganingizni baholang",
+  "«Не помню» или «Легко» — умный алгоритм SM-2 сам подстроит интервал повторения.":
+    "«Esimda yo'q» yoki «Oson» — aqlli SM-2 algoritmi takrorlash intervalini o'zi sozlaydi.",
+  "4. 15 карточек в день": "4. Kuniga 15 ta kartochka",
+  "«Колода на сегодня» сама соберёт нужный микс: слова вернутся ровно тогда, когда начнёшь их забывать.":
+    "«Bugungi to'plam» kerakli aralashmani o'zi yig'adi: so'zlar aynan unuta boshlaganingizda qaytadi.",
+  "Что это даёт": "Bu nimaga yordam beradi",
+  "Слова остаются в памяти надолго — повторения приходят в нужный момент":
+    "So'zlar xotirada uzoq qoladi — takrorlashlar aynan kerakli paytda keladi",
+  "Виден прогресс: уровень владения растёт с каждой карточкой":
+    "Rivojlanish ko'rinadi: til darajasi har bir kartochka bilan o'sadi",
+  "Достаточно 10–15 минут в день — без зубрёжки и стресса":
+    "Kuniga 10–15 daqiqa yetarli — yodlash va stresssiz",
+  "Понятно, начать!": "Tushunarli, boshlaymiz!",
+
   // ── Flashcard flip flow (no AI) ──────────────────────
   "Какой перевод?": "Tarjimasi qanday?",
   Проверить: "Tekshirish",

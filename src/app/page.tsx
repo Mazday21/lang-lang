@@ -30,6 +30,7 @@ import { proficiencyLabel } from "@/lib/data/placement-tests";
 import { ManualDeckModal } from "@/components/manual-deck-modal";
 import { isLocalDeckId, deleteLocalDeck, getLocalDeckItems } from "@/lib/local-decks";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { HowToScreen } from "@/components/how-to-screen";
 import { LanguageSwitcherModal } from "@/components/language-switcher-modal";
 import { PlacementTestModal, PlacementMode } from "@/components/placement-test-modal";
 
@@ -53,6 +54,8 @@ export default function HubPage() {
   // Modals state
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isLanguageSwitcherOpen, setIsLanguageSwitcherOpen] = useState(false);
+  // null until checked on the client (avoids SSR mismatch)
+  const [howToSeen, setHowToSeen] = useState<boolean | null>(null);
 
   // Proficiency level (0..10) + placement test
   const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -311,6 +314,15 @@ export default function HubPage() {
     return t("карточек");
   };
 
+  // First-run explainer: shown right after the languages are chosen (once per device)
+  useEffect(() => {
+    try {
+      setHowToSeen(localStorage.getItem("app_howto_seen") === "1");
+    } catch {
+      setHowToSeen(true); // localStorage unavailable → don't block the app
+    }
+  }, []);
+
   // Check if first-time onboarding should be displayed
   const needsOnboarding = Boolean(
     !isAuthLoading &&
@@ -339,6 +351,22 @@ export default function HubPage() {
   // First-time onboarding screen
   if (needsOnboarding) {
     return <OnboardingWizard onComplete={handleCompleteOnboarding} />;
+  }
+
+  // First-run explainer: «how to use the app» right after language selection
+  if (user && howToSeen === false) {
+    return (
+      <HowToScreen
+        onStart={() => {
+          try {
+            localStorage.setItem("app_howto_seen", "1");
+          } catch {
+            // ignore
+          }
+          setHowToSeen(true);
+        }}
+      />
+    );
   }
 
   return (
