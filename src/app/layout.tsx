@@ -24,7 +24,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru">
+    // suppressHydrationWarning: telegram-web-app.js (beforeInteractive) writes
+    // its CSS variables (--tg-viewport-height etc.) into <html style> before
+    // React hydrates — that's an expected external mutation, not an app bug.
+    <html lang="ru" suppressHydrationWarning>
       <head>
         <TelegramScript />
       </head>
