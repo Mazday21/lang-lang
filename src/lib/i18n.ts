@@ -36,12 +36,6 @@ export const UZ_MAP: Record<string, string> = {
   "Ещё {count} можно повторить позже": "Yana {count} ta kartochkani keyinroq takrorlash mumkin",
   "Ещё {count} {word} — повторите позже или завтра":
     "Yana {count} {word} — ertaga yoki keyinroq takrorlang",
-  "Уровень владения:": "Til darajasi:",
-  "(+{n} за обучение)": "(+{n} o'rganish uchun)",
-  "Пройти заново": "Qayta topshirish",
-  "Пройти тест": "Testni topshirish",
-  "Попробовать ИИ-суперсилы": "AI-superkuchlarini sinab ko'ring",
-  "Сгенерировать колоду с помощью AI": "AI yordamida to'plam yaratish",
   "Колоды для изучения ({pair})": "O'rganish uchun to'plamlar ({pair})",
   "Обновить список": "Ro'yxatni yangilash",
   "У вас пока нет колод для этой языковой пары":
@@ -179,36 +173,8 @@ export const UZ_MAP: Record<string, string> = {
   "Продолжить без голоса": "Ovozsiz davom etish",
   "Продолжить без ИИ": "AI'siz davom etish",
 
-  // ── Placement test ───────────────────────────────────
-  "Мини-тест на уровень": "Daraja uchun mini-test",
-  "Вопрос {i} из {n}": "Savol {i} / {n}",
-  "Вопросы усложняются — это поможет точнее определить ваш уровень":
-    "Savollar murakkashib boradi — bu darajangizni aniqroq belgilashga yordam beradi",
-  "Выбрать уровень вручную": "Darajani qo'lda tanlash",
-  "Пропустить тест": "Testni o'tkazib yuborish",
-  "Языки обучения": "O'qish tillari",
-  "Шаг перед мини-тестом на уровень": "Daraja mini-testidan oldingi qadam",
-  "Выберите ваш родной язык и язык, который хотите изучать. Тест и колоды будут подобраны именно для этой пары.":
-    "Ona tilingizni va o'rganmoqchi bo'lgan tilni tanlang. Test va to'plamlar aynan shu juftlik uchun tanlanadi.",
-  "1. Родной язык:": "1. Ona tili:",
+  // ── Language switcher ────────────────────────────────
   "2. Язык изучения:": "2. O'rganiladigan til:",
-  "Далее — мини-тест": "Keyingi — mini-test",
-  "Уровень владения": "Til darajasi",
-  "Выберите свой текущий уровень от 0 до 10. По мере обучения уровень будет расти автоматически.":
-    "Joriy darajangizni 0 dan 10 gacha tanlang. O'qish davomida daraja avtomatik o'sadi.",
-  "Уровень {n}/10 · {label}": "Daraja {n}/10 · {label}",
-  "Сохранить уровень": "Darajani saqlash",
-  "Вернуться к тесту": "Testga qaytish",
-  "Тест пройден!": "Test topshirildi!",
-  "Уровень сохранён!": "Daraja saqlandi!",
-  "Правильных ответов: {s} из {t}": "To'g'ri javoblar: {s} / {t}",
-  "Уровень выбран вручную": "Daraja qo'lda tanlandi",
-  "Ваш уровень владения": "Sizning til darajangiz",
-  "Мы подняли подходящие вам колоды наверх списка. Уровень будет расти автоматически по мере выученных слов, а тест можно пройти заново в любой момент.":
-    "Sizga mos to'plamlarni ro'yxat yuqoriga ko'tardik. Daraja o'rganilgan so'zlar bilan avtomatik o'sadi, testni istalgan vaqtda qayta topshirish mumkin.",
-  "Начать обучение": "O'qishni boshlash",
-  Сохраняем: "Saqlanmoqda...",
-  "Сохраняем...": "Saqlanmoqda...",
 
   // ── Onboarding & language switcher ───────────────────
   "Выберите родной язык": "Ona tilini tanlang",
