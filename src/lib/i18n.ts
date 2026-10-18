@@ -395,6 +395,7 @@ export const UZ_MAP: Record<string, string> = {
   "Колода не найдена": "To'plam topilmadi",
 
   // ── Flashcard flip flow (no AI) ──────────────────────
+  "Какой перевод?": "Tarjimasi qanday?",
   Проверить: "Tekshirish",
   Перевод: "Tarjima",
   "Не помню": "Esimda yo'q",

@@ -7,7 +7,7 @@ import { useI18n } from "@/context/i18n-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, CheckCircle2, Lightbulb, Eye } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Lightbulb, Eye, HelpCircle } from "lucide-react";
 import { CardItem } from "@/lib/data/decks";
 import { SM2Grade } from "@/lib/sm2";
 import { isLocalDeckId, getLocalDeck, gradeLocalCard } from "@/lib/local-decks";
@@ -298,10 +298,11 @@ export default function TrainPage({ params }: { params: Promise<{ deckId: string
       <Card className="border-[#DCD0F5] bg-white shadow-none">
         <CardContent className="p-6 space-y-4">
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold text-[#7B6FA6] uppercase tracking-wider">
-              {t("Задание")}
+            <p className="text-sm font-medium text-[#7B6FA6] flex items-center gap-1.5">
+              <HelpCircle className="h-4 w-4 text-[#B7A0F6] shrink-0" />
+              {t("Какой перевод?")}
             </p>
-            <p className="text-2xl font-semibold text-[#2A2352] leading-snug">
+            <p className="text-2xl font-semibold text-[#2A2352] leading-snug break-words">
               {currentCard.front}
             </p>
           </div>
